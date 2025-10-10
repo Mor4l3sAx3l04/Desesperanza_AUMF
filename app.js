@@ -4,26 +4,31 @@ function sanitizeInput(input) {
     // Elimina etiquetas HTML y PHP
     return input.replace(/<[^>]*>?/gm, '').replace(/<\?php.*?\?>/gs, '');
 }
+
 const express = require("express");
-const mysql = require("mysql2");
+const { Pool } = require("pg");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 const upload = multer();
 const app = express();
 
-const con = mysql.createConnection({
+// Configuración de PostgreSQL
+const pool = new Pool({
     host: "localhost",
     user: "root",
     password: "n0m3l0",
-    database: "deseperanza"
+    database: "deseperanza",
+    port: 5432 // Puerto por defecto de PostgreSQL
 });
 
-con.connect((err) => {
+// Verificar conexión
+pool.connect((err, client, release) => {
     if (err) {
         console.error("Error al conectar a la base de datos:", err);
         process.exit(1);
     } else {
-        console.log("Conexión exitosa a la base de datos panaderia");
+        console.log("Conexión exitosa a la base de datos");
+        release();
     }
 });
 
@@ -32,7 +37,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 // Crear producto
-app.post("/agregarProducto", upload.single("imagen"), (req, res) => {
+app.post("/agregarProducto", upload.single("imagen"), async (req, res) => {
     let { nombre, descripcion, precio, stock } = req.body;
     let imagenBuffer = null;
     if (req.file) {
@@ -47,32 +52,32 @@ app.post("/agregarProducto", upload.single("imagen"), (req, res) => {
     if (isNaN(precio) || precio <= 0 || isNaN(stock) || stock < 0) {
         return res.status(400).json({ error: "Precio y stock deben ser valores válidos." });
     }
-    con.query(
-        "INSERT INTO producto (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)",
-        [nombre, descripcion, precio, stock, imagenBuffer],
-        (err, result) => {
-            if (err) {
-                console.error("Error al agregar producto:", err);
-                return res.status(500).json({ error: "Error al agregar producto." });
-            }
-            return res.json({ mensaje: "Producto agregado correctamente." });
-        }
-    );
+    
+    try {
+        await pool.query(
+            "INSERT INTO producto (nombre, descripcion, precio, stock, imagen) VALUES ($1, $2, $3, $4, $5)",
+            [nombre, descripcion, precio, stock, imagenBuffer]
+        );
+        return res.json({ mensaje: "Producto agregado correctamente." });
+    } catch (err) {
+        console.error("Error al agregar producto:", err);
+        return res.status(500).json({ error: "Error al agregar producto." });
+    }
 });
 
 // Leer productos
-app.get("/obtenerProductos", (req, res) => {
-    con.query("SELECT * FROM producto", (err, rows) => {
-        if (err) {
-            console.error("Error al obtener productos:", err);
-            return res.status(500).json({ error: "Error al obtener productos." });
-        }
-        return res.json(rows);
-    });
+app.get("/obtenerProductos", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM producto");
+        return res.json(result.rows);
+    } catch (err) {
+        console.error("Error al obtener productos:", err);
+        return res.status(500).json({ error: "Error al obtener productos." });
+    }
 });
 
 // Actualizar producto
-app.post("/actualizarProducto", upload.single("imagen"), (req, res) => {
+app.post("/actualizarProducto", upload.single("imagen"), async (req, res) => {
     let { id_producto, nombre, descripcion, precio, stock } = req.body;
     let imagenBuffer = null;
     if (req.file) {
@@ -87,61 +92,64 @@ app.post("/actualizarProducto", upload.single("imagen"), (req, res) => {
     if (isNaN(precio) || precio <= 0 || isNaN(stock) || stock < 0) {
         return res.status(400).json({ error: "Precio y stock deben ser valores válidos." });
     }
+    
     let sql, params;
     if (imagenBuffer) {
-        sql = "UPDATE producto SET nombre=?, descripcion=?, precio=?, stock=?, imagen=? WHERE id_producto=?";
+        sql = "UPDATE producto SET nombre=$1, descripcion=$2, precio=$3, stock=$4, imagen=$5 WHERE id_producto=$6";
         params = [nombre, descripcion, precio, stock, imagenBuffer, id_producto];
     } else {
-        sql = "UPDATE producto SET nombre=?, descripcion=?, precio=?, stock=? WHERE id_producto=?";
+        sql = "UPDATE producto SET nombre=$1, descripcion=$2, precio=$3, stock=$4 WHERE id_producto=$5";
         params = [nombre, descripcion, precio, stock, id_producto];
     }
-    con.query(
-        sql,
-        params,
-        (err, result) => {
-            if (err) {
-                console.error("Error al actualizar producto:", err);
-                return res.status(500).json({ error: "Error al actualizar producto." });
-            }
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ error: "Producto no encontrado." });
-            }
-            return res.json({ mensaje: "Producto actualizado correctamente." });
+    
+    try {
+        const result = await pool.query(sql, params);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Producto no encontrado." });
         }
-    );
+        return res.json({ mensaje: "Producto actualizado correctamente." });
+    } catch (err) {
+        console.error("Error al actualizar producto:", err);
+        return res.status(500).json({ error: "Error al actualizar producto." });
+    }
 });
+
 // Endpoint para servir la imagen desde la base de datos
-app.get("/imagen/:id_producto", (req, res) => {
+app.get("/imagen/:id_producto", async (req, res) => {
     const { id_producto } = req.params;
-    con.query("SELECT imagen FROM producto WHERE id_producto = ?", [id_producto], (err, results) => {
-        if (err || results.length === 0 || !results[0].imagen) {
+    try {
+        const result = await pool.query("SELECT imagen FROM producto WHERE id_producto = $1", [id_producto]);
+        if (result.rows.length === 0 || !result.rows[0].imagen) {
             return res.status(404).send("Imagen no encontrada");
         }
-        res.set("Content-Type", "image/jpeg"); // Ajusta si usas otro formato
-        res.send(results[0].imagen);
-    });
+        res.set("Content-Type", "image/jpeg");
+        res.send(result.rows[0].imagen);
+    } catch (err) {
+        console.error("Error al obtener imagen:", err);
+        return res.status(500).send("Error al obtener imagen");
+    }
 });
 
 // Eliminar producto
-app.post("/borrarProducto", (req, res) => {
+app.post("/borrarProducto", async (req, res) => {
     const { id_producto } = req.body;
     if (!id_producto) {
         return res.status(400).json({ error: "ID de producto es obligatorio." });
     }
-    con.query(
-        "DELETE FROM producto WHERE id_producto=?",
-        [id_producto],
-        (err, result) => {
-            if (err) {
-                console.error("Error al borrar producto:", err);
-                return res.status(500).json({ error: "Error al borrar producto." });
-            }
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ error: "Producto no encontrado." });
-            }
-            return res.json({ mensaje: "Producto borrado correctamente." });
+    
+    try {
+        const result = await pool.query(
+            "DELETE FROM producto WHERE id_producto=$1",
+            [id_producto]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Producto no encontrado." });
         }
-    );
+        return res.json({ mensaje: "Producto borrado correctamente." });
+    } catch (err) {
+        console.error("Error al borrar producto:", err);
+        return res.status(500).json({ error: "Error al borrar producto." });
+    }
 });
 
 app.listen(10000, () => {
