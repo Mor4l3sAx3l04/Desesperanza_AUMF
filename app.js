@@ -14,11 +14,10 @@ const app = express();
 
 // Configuración de PostgreSQL
 const pool = new Pool({
-    host: "localhost",
-    user: "root",
-    password: "n0m3l0",
-    database: "deseperanza",
-    port: 5432 // Puerto por defecto de PostgreSQL
+    connectionString: process.env.DATABASE_URL || "postgresql://root:n0m3l0@localhost:5432/deseperanza",
+    ssl: process.env.DATABASE_URL ? {
+        rejectUnauthorized: false
+    } : false
 });
 
 // Verificar conexión
@@ -35,6 +34,26 @@ pool.connect((err, client, release) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
+// Endpoint para crear la tabla (EJECUTAR UNA SOLA VEZ)
+app.get("/setup", async (req, res) => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS producto (
+                id_producto SERIAL PRIMARY KEY,
+                nombre VARCHAR(255) NOT NULL,
+                descripcion TEXT,
+                precio DECIMAL(10, 2) NOT NULL,
+                stock INTEGER NOT NULL DEFAULT 0,
+                imagen BYTEA
+            );
+        `);
+        res.json({ mensaje: "✓ Tabla producto creada correctamente" });
+    } catch (err) {
+        console.error("Error al crear tabla:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Crear producto
 app.post("/agregarProducto", upload.single("imagen"), async (req, res) => {
@@ -152,6 +171,7 @@ app.post("/borrarProducto", async (req, res) => {
     }
 });
 
-app.listen(10000, () => {
-    console.log("Servidor escuchando en el puerto 10000");
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
