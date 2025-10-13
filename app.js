@@ -1,177 +1,356 @@
-// Función para limpiar etiquetas HTML, JS o PHP
-function sanitizeInput(input) {
-    if (!input) return '';
-    // Elimina etiquetas HTML y PHP
-    return input.replace(/<[^>]*>?/gm, '').replace(/<\?php.*?\?>/gs, '');
-}
+// app.js
+// Servidor Express con autenticación por sesión, manejo de productos y carrito
 
 const express = require("express");
-const { Pool } = require("pg");
+const mysql = require("mysql2");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 const upload = multer();
+const bcrypt = require("bcrypt");
+const session = require("express-session");
+
 const app = express();
 
-// Configuración de PostgreSQL
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || "postgresql://root:n0m3l0@localhost:5432/deseperanza",
-    ssl: process.env.DATABASE_URL ? {
-        rejectUnauthorized: false
-    } : false
+// --- Sanitizador simple ---
+function sanitizeInput(input) {
+    if (!input) return '';
+    return String(input).replace(/<[^>]*>?/gm, '').replace(/<\?php.*?\?>/gs, '');
+}
+
+// --- Conexión MySQL ---
+const con = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "n0m3l0",
+    database: "deseperanza"
 });
 
-// Verificar conexión
-pool.connect((err, client, release) => {
+con.connect((err) => {
     if (err) {
         console.error("Error al conectar a la base de datos:", err);
         process.exit(1);
     } else {
-        console.log("Conexión exitosa a la base de datos");
-        release();
+        console.log("Conexión exitosa a la base de datos panaderia");
     }
 });
 
+// --- Middlewares ---
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+app.use(session({
+    secret: "cambiar_esto_a_algo_seguro", // en producción usar variable de entorno
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 1 día
+}));
 
-// Endpoint para crear la tabla (EJECUTAR UNA SOLA VEZ)
-app.get("/setup", async (req, res) => {
+// --- Rutas de autenticación ---
+
+// Registro
+app.post("/register", async (req, res) => {
+    let { nombre, email, password, rol } = req.body;
+    nombre = sanitizeInput(nombre);
+    email = sanitizeInput(email);
+    rol = rol === 'admin' ? 'admin' : 'cliente';
+
+    if (!nombre || !email || !password) {
+        return res.status(400).json({ error: "Todos los campos son obligatorios." });
+    }
     try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS producto (
-                id_producto SERIAL PRIMARY KEY,
-                nombre VARCHAR(255) NOT NULL,
-                descripcion TEXT,
-                precio DECIMAL(10, 2) NOT NULL,
-                stock INTEGER NOT NULL DEFAULT 0,
-                imagen BYTEA
-            );
-        `);
-        res.json({ mensaje: "✓ Tabla producto creada correctamente" });
+        const [rows] = await con.promise().query("SELECT id_usuario FROM usuario WHERE email = ?", [email]);
+        if (rows.length > 0) return res.status(400).json({ error: "Email ya registrado." });
+
+        const hashed = await bcrypt.hash(password, 10);
+        const [result] = await con.promise().query(
+            "INSERT INTO usuario (nombre, email, password, rol) VALUES (?, ?, ?, ?)",
+            [nombre, email, hashed, rol]
+        );
+        // iniciar sesión automáticamente
+        req.session.user = { id_usuario: result.insertId, nombre, email, rol };
+        return res.json({ mensaje: "Registrado correctamente.", user: req.session.user });
     } catch (err) {
-        console.error("Error al crear tabla:", err);
-        res.status(500).json({ error: err.message });
+        console.error(err);
+        return res.status(500).json({ error: "Error en el registro." });
     }
 });
 
-// Crear producto
-app.post("/agregarProducto", upload.single("imagen"), async (req, res) => {
+// Login
+app.post("/login", async (req, res) => {
+    let { email, password } = req.body;
+    email = sanitizeInput(email);
+    if (!email || !password) return res.status(400).json({ error: "Email y contraseña son obligatorios." });
+
+    try {
+        const [rows] = await con.promise().query("SELECT id_usuario, nombre, email, password, rol FROM usuario WHERE email = ?", [email]);
+        if (rows.length === 0) return res.status(400).json({ error: "Credenciales inválidas." });
+        const user = rows[0];
+        const ok = await bcrypt.compare(password, user.password);
+        if (!ok) return res.status(400).json({ error: "Credenciales inválidas." });
+
+        req.session.user = {
+            id_usuario: user.id_usuario,
+            nombre: user.nombre,
+            email: user.email,
+            rol: user.rol
+        };
+        return res.json({ mensaje: "Login correcto.", user: req.session.user });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error en el login." });
+    }
+});
+
+// Logout
+app.post("/logout", (req, res) => {
+    req.session.destroy(err => {
+        if (err) return res.status(500).json({ error: "Error al cerrar sesión." });
+        res.clearCookie('connect.sid');
+        return res.json({ mensaje: "Cerraste sesión." });
+    });
+});
+
+// Obtener usuario actual (si está autenticado)
+app.get("/me", (req, res) => {
+    if (!req.session.user) return res.json({ user: null });
+    return res.json({ user: req.session.user });
+});
+
+// --- Endpoints productos (tus endpoints existentes adaptados) ---
+
+// Crear producto (admin)
+app.post("/agregarProducto", upload.single("imagen"), (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
     let { nombre, descripcion, precio, stock } = req.body;
     let imagenBuffer = null;
-    if (req.file) {
-        imagenBuffer = req.file.buffer;
-    }
-    // Sanitizar entradas
+    if (req.file) imagenBuffer = req.file.buffer;
+
     nombre = sanitizeInput(nombre);
     descripcion = sanitizeInput(descripcion);
     if (!nombre || !precio || !stock) {
         return res.status(400).json({ error: "Nombre, precio y stock son obligatorios." });
     }
+    precio = Number(precio);
+    stock = Number(stock);
     if (isNaN(precio) || precio <= 0 || isNaN(stock) || stock < 0) {
         return res.status(400).json({ error: "Precio y stock deben ser valores válidos." });
     }
-    
-    try {
-        await pool.query(
-            "INSERT INTO producto (nombre, descripcion, precio, stock, imagen) VALUES ($1, $2, $3, $4, $5)",
-            [nombre, descripcion, precio, stock, imagenBuffer]
-        );
-        return res.json({ mensaje: "Producto agregado correctamente." });
-    } catch (err) {
-        console.error("Error al agregar producto:", err);
-        return res.status(500).json({ error: "Error al agregar producto." });
-    }
+    con.query(
+        "INSERT INTO producto (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)",
+        [nombre, descripcion, precio, stock, imagenBuffer],
+        (err, result) => {
+            if (err) {
+                console.error("Error al agregar producto:", err);
+                return res.status(500).json({ error: "Error al agregar producto." });
+            }
+            return res.json({ mensaje: "Producto agregado correctamente." });
+        }
+    );
 });
 
-// Leer productos
-app.get("/obtenerProductos", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM producto");
-        return res.json(result.rows);
-    } catch (err) {
-        console.error("Error al obtener productos:", err);
-        return res.status(500).json({ error: "Error al obtener productos." });
-    }
+// Leer productos (para todos)
+app.get("/obtenerProductos", (req, res) => {
+    con.query("SELECT id_producto, nombre, descripcion, precio, stock, imagen IS NOT NULL as tieneImagen FROM producto", (err, rows) => {
+        if (err) {
+            console.error("Error al obtener productos:", err);
+            return res.status(500).json({ error: "Error al obtener productos." });
+        }
+        return res.json(rows);
+    });
 });
 
-// Actualizar producto
-app.post("/actualizarProducto", upload.single("imagen"), async (req, res) => {
+// Actualizar producto (admin)
+app.post("/actualizarProducto", upload.single("imagen"), (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
     let { id_producto, nombre, descripcion, precio, stock } = req.body;
     let imagenBuffer = null;
-    if (req.file) {
-        imagenBuffer = req.file.buffer;
-    }
-    // Sanitizar entradas
+    if (req.file) imagenBuffer = req.file.buffer;
+
     nombre = sanitizeInput(nombre);
     descripcion = sanitizeInput(descripcion);
     if (!id_producto || !nombre || !precio || !stock) {
         return res.status(400).json({ error: "ID, nombre, precio y stock son obligatorios." });
     }
+    precio = Number(precio);
+    stock = Number(stock);
     if (isNaN(precio) || precio <= 0 || isNaN(stock) || stock < 0) {
         return res.status(400).json({ error: "Precio y stock deben ser valores válidos." });
     }
-    
     let sql, params;
     if (imagenBuffer) {
-        sql = "UPDATE producto SET nombre=$1, descripcion=$2, precio=$3, stock=$4, imagen=$5 WHERE id_producto=$6";
+        sql = "UPDATE producto SET nombre=?, descripcion=?, precio=?, stock=?, imagen=? WHERE id_producto=?";
         params = [nombre, descripcion, precio, stock, imagenBuffer, id_producto];
     } else {
-        sql = "UPDATE producto SET nombre=$1, descripcion=$2, precio=$3, stock=$4 WHERE id_producto=$5";
+        sql = "UPDATE producto SET nombre=?, descripcion=?, precio=?, stock=? WHERE id_producto=?";
         params = [nombre, descripcion, precio, stock, id_producto];
     }
-    
-    try {
-        const result = await pool.query(sql, params);
-        if (result.rowCount === 0) {
+    con.query(sql, params, (err, result) => {
+        if (err) {
+            console.error("Error al actualizar producto:", err);
+            return res.status(500).json({ error: "Error al actualizar producto." });
+        }
+        if (result.affectedRows === 0) {
             return res.status(404).json({ error: "Producto no encontrado." });
         }
         return res.json({ mensaje: "Producto actualizado correctamente." });
-    } catch (err) {
-        console.error("Error al actualizar producto:", err);
-        return res.status(500).json({ error: "Error al actualizar producto." });
-    }
+    });
 });
 
-// Endpoint para servir la imagen desde la base de datos
-app.get("/imagen/:id_producto", async (req, res) => {
+// Servir imagen
+app.get("/imagen/:id_producto", (req, res) => {
     const { id_producto } = req.params;
-    try {
-        const result = await pool.query("SELECT imagen FROM producto WHERE id_producto = $1", [id_producto]);
-        if (result.rows.length === 0 || !result.rows[0].imagen) {
+    con.query("SELECT imagen FROM producto WHERE id_producto = ?", [id_producto], (err, results) => {
+        if (err || results.length === 0 || !results[0].imagen) {
             return res.status(404).send("Imagen no encontrada");
         }
         res.set("Content-Type", "image/jpeg");
-        res.send(result.rows[0].imagen);
-    } catch (err) {
-        console.error("Error al obtener imagen:", err);
-        return res.status(500).send("Error al obtener imagen");
-    }
+        res.send(results[0].imagen);
+    });
 });
 
-// Eliminar producto
-app.post("/borrarProducto", async (req, res) => {
+// Borrar producto (admin)
+app.post("/borrarProducto", (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
     const { id_producto } = req.body;
     if (!id_producto) {
         return res.status(400).json({ error: "ID de producto es obligatorio." });
     }
-    
-    try {
-        const result = await pool.query(
-            "DELETE FROM producto WHERE id_producto=$1",
-            [id_producto]
-        );
-        if (result.rowCount === 0) {
+    con.query("DELETE FROM producto WHERE id_producto=?", [id_producto], (err, result) => {
+        if (err) {
+            console.error("Error al borrar producto:", err);
+            return res.status(500).json({ error: "Error al borrar producto." });
+        }
+        if (result.affectedRows === 0) {
             return res.status(404).json({ error: "Producto no encontrado." });
         }
         return res.json({ mensaje: "Producto borrado correctamente." });
+    });
+});
+
+// --- Endpoints carrito ---
+
+// Agregar al carrito (cliente)
+app.post("/carrito/agregar", async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: "No autenticado." });
+    const id_usuario = req.session.user.id_usuario;
+    const { id_producto, cantidad } = req.body;
+    if (!id_producto || !cantidad) return res.status(400).json({ error: "Producto y cantidad obligatorios." });
+
+    // verificar stock
+    try {
+        const [p] = await con.promise().query("SELECT stock FROM producto WHERE id_producto = ?", [id_producto]);
+        if (p.length === 0) return res.status(404).json({ error: "Producto no encontrado." });
+        if (p[0].stock < cantidad) return res.status(400).json({ error: "No hay suficiente stock." });
+
+        // si ya existe el producto en el carrito, sumar cantidad
+        const [exists] = await con.promise().query("SELECT id_carrito, cantidad FROM carrito WHERE id_usuario = ? AND id_producto = ?", [id_usuario, id_producto]);
+        if (exists.length > 0) {
+            const nueva = exists[0].cantidad + Number(cantidad);
+            await con.promise().query("UPDATE carrito SET cantidad = ? WHERE id_carrito = ?", [nueva, exists[0].id_carrito]);
+        } else {
+            await con.promise().query("INSERT INTO carrito (id_usuario, id_producto, cantidad) VALUES (?, ?, ?)", [id_usuario, id_producto, cantidad]);
+        }
+        return res.json({ mensaje: "Agregado al carrito." });
     } catch (err) {
-        console.error("Error al borrar producto:", err);
-        return res.status(500).json({ error: "Error al borrar producto." });
+        console.error(err);
+        return res.status(500).json({ error: "Error al agregar al carrito." });
     }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${PORT}`);
+// Obtener carrito del usuario
+app.get("/carrito", async (req, res) => {
+    if (!req.session.user) return res.json({ items: [] });
+    const id_usuario = req.session.user.id_usuario;
+    try {
+        const [rows] = await con.promise().query(
+            `SELECT c.id_carrito, c.cantidad, p.id_producto, p.nombre, p.precio 
+             FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = ?`,
+            [id_usuario]
+        );
+        return res.json({ items: rows });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error al obtener carrito." });
+    }
+});
+
+// Actualizar cantidad en carrito
+app.post("/carrito/actualizar", async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: "No autenticado." });
+    const { id_carrito, cantidad } = req.body;
+    if (!id_carrito || cantidad == null) return res.status(400).json({ error: "Datos incompletos." });
+
+    try {
+        // verificar stock del producto
+        const [rows] = await con.promise().query("SELECT id_producto FROM carrito WHERE id_carrito = ?", [id_carrito]);
+        if (rows.length === 0) return res.status(404).json({ error: "Item no encontrado." });
+        const id_producto = rows[0].id_producto;
+        const [p] = await con.promise().query("SELECT stock FROM producto WHERE id_producto = ?", [id_producto]);
+        if (p.length === 0) return res.status(404).json({ error: "Producto no encontrado." });
+        if (p[0].stock < cantidad) return res.status(400).json({ error: "No hay suficiente stock." });
+
+        await con.promise().query("UPDATE carrito SET cantidad = ? WHERE id_carrito = ?", [cantidad, id_carrito]);
+        return res.json({ mensaje: "Cantidad actualizada." });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error al actualizar carrito." });
+    }
+});
+
+// Eliminar item del carrito
+app.post("/carrito/eliminar", async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: "No autenticado." });
+    const { id_carrito } = req.body;
+    if (!id_carrito) return res.status(400).json({ error: "ID de carrito obligatorio." });
+    try {
+        await con.promise().query("DELETE FROM carrito WHERE id_carrito = ?", [id_carrito]);
+        return res.json({ mensaje: "Item eliminado." });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error al eliminar item." });
+    }
+});
+
+// Checkout: descontar stock y vaciar carrito del usuario (transacción simple)
+app.post("/carrito/checkout", async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: "No autenticado." });
+    const id_usuario = req.session.user.id_usuario;
+    const connection = con.promise();
+    try {
+        await connection.query("START TRANSACTION");
+        const [items] = await connection.query(
+            `SELECT c.id_carrito, c.cantidad, p.id_producto, p.stock 
+             FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = ? FOR UPDATE`,
+            [id_usuario]
+        );
+        if (items.length === 0) {
+            await connection.query("ROLLBACK");
+            return res.status(400).json({ error: "Carrito vacío." });
+        }
+        for (const it of items) {
+            if (it.stock < it.cantidad) {
+                await connection.query("ROLLBACK");
+                return res.status(400).json({ error: `No hay suficiente stock para ${it.id_producto}.` });
+            }
+            await connection.query("UPDATE producto SET stock = stock - ? WHERE id_producto = ?", [it.cantidad, it.id_producto]);
+        }
+        await connection.query("DELETE FROM carrito WHERE id_usuario = ?", [id_usuario]);
+        await connection.query("COMMIT");
+        return res.json({ mensaje: "Compra realizada con éxito." });
+    } catch (err) {
+        console.error(err);
+        try { await connection.query("ROLLBACK"); } catch(e){}
+        return res.status(500).json({ error: "Error en checkout." });
+    }
+});
+
+// --- Puerto ---
+app.listen(10000, () => {
+    console.log("Servidor escuchando en el puerto 10000");
 });

@@ -1,103 +1,198 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panadería La Desesperanza - Inventario de Panes</title>
-    <link rel="stylesheet" href="estilo.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panadería La Desesperanza - Inventario de Panes</title>
+  <link rel="stylesheet" href="estilo.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <header class="bg-warning text-center py-4 mb-4 shadow">
-        <h1 class="display-4 fw-bold">Panadería La Desesperanza</h1>
-        <p class="lead">¡Panes de temporada Día de Muertos y Halloween!</p>
-    </header>
+  <header class="bg-warning text-center py-4 mb-4 shadow position-relative">
+    <div class="container d-flex align-items-center justify-content-between">
+      <div>
+        <h1 class="display-6 fw-bold mb-0">Panadería La Desesperanza</h1>
+        <small class="lead">¡Panes de temporada Día de Muertos y Halloween!</small>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <!-- Carrito -->
+        <button id="btnCarrito" class="btn btn-outline-dark position-relative" title="Ver carrito">
+          🛒 <span id="badgeCarrito" class="badge bg-danger position-absolute top-0 start-100 translate-middle">0</span>
+        </button>
+        <!-- Perfil -->
+        <div class="dropdown">
+          <button id="btnPerfil" class="btn btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Perfil</button>
+          <ul class="dropdown-menu dropdown-menu-end" id="perfilDropdown">
+            <!-- Opciones se llenan desde JS -->
+            <li><a class="dropdown-item" href="#" id="logoutBtn">Cerrar sesión</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
 
-    <main class="container">
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h2 class="mb-3">Inventario de Panes</h2>
+  <!-- Overlay Login/Register (se muestra inicialmente) -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card shadow rounded-4 d-flex">
+      <div class="col-md-6 auth-left d-none d-md-block">
+        <img src="panes3.jpeg" alt="panaderia" />
+      </div>
+      <div class="auth-right p-4">
+        <h3 id="authTitle">Crear cuenta</h3>
+        <form id="formRegister">
+          <input type="hidden" name="rol" id="rolInput" value="cliente">
+          <div class="mb-2">
+            <label class="form-label">Nombre</label>
+            <input name="nombre" id="regNombre" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Email</label>
+            <input name="email" id="regEmail" type="email" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Contraseña</label>
+            <input name="password" id="regPassword" type="password" class="form-control" required />
+          </div>
+          <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div>
+              <a href="#" id="switchToLogin">¿Ya tienes cuenta? Iniciar sesión</a>
             </div>
-            <div class="col-md-4 text-end">
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalProducto">Agregar Pan</button>
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle" id="tablaProductos">
-                <thead class="table-dark">
-                    <tr>
-                        <th>#</th>
-                        <th>Imagen</th>
-                        <th>Nombre</th>
-                        <th>Descripción</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Productos aquí -->
-                </tbody>
-            </table>
-        </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary w-100" type="submit">Registrarme</button>
+          </div>
+          <div id="authError" class="alert alert-danger mt-3 d-none"></div>
+        </form>
 
-        <h2 class="mt-5 mb-3">Galería de Panes de Temporada</h2>
-        <div class="row g-3" id="galeria">
-            <!-- Imágenes de panes -->
-        </div>
-    </main>
+        <form id="formLogin" class="d-none mt-2">
+          <div class="mb-2">
+            <label class="form-label">Email</label>
+            <input id="logEmail" type="email" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Contraseña</label>
+            <input id="logPassword" type="password" class="form-control" required />
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success w-100" type="submit">Iniciar sesión</button>
+          </div>
+          <div class="mt-2">
+            <a href="#" id="switchToRegister">¿No tienes cuenta? Crear cuenta</a>
+          </div>
+          <div id="loginError" class="alert alert-danger mt-3 d-none"></div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-    <!-- Modal para agregar/editar producto -->
-    <div class="modal fade" id="modalProducto" tabindex="-1" aria-labelledby="modalProductoLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="formProducto" enctype="multipart/form-data">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="modalProductoLabel">Agregar/Editar Pan</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="id_producto" name="id_producto">
-                        <div class="row g-2">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="nombre" class="form-label fw-semibold">Nombre</label>
-                                <input type="text" class="form-control rounded-pill" id="nombre" name="nombre" required>
-                            </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="precio" class="form-label fw-semibold">Precio ($)</label>
-                                <input type="number" class="form-control rounded-pill" id="precio" name="precio" min="1" step="0.01" required>
-                            </div>
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="stock" class="form-label fw-semibold">Stock</label>
-                                <input type="number" class="form-control rounded-pill" id="stock" name="stock" min="0" required>
-                            </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="imagen" class="form-label fw-semibold">Imagen</label>
-                                <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="descripcion" class="form-label fw-semibold">Descripción</label>
-                            <textarea class="form-control rounded-4" id="descripcion" name="descripcion" rows="2"></textarea>
-                        </div>
-                        <div id="mensajeError" class="alert alert-danger d-none"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+  <main class="container" id="mainApp" style="display:none;">
+    <div class="row mb-4">
+      <div class="col-md-8">
+        <h2 class="mb-3">Inventario de Panes</h2>
+      </div>
+      <div class="col-md-4 text-end">
+        <button id="btnAgregarPan" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalProducto">Agregar Pan</button>
+      </div>
     </div>
 
-    <footer class="bg-dark text-white text-center py-3 mt-5">
-        <small>&copy; 2025 Panadería La Desesperanza</small>
-    </footer>
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle" id="tablaProductos">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Productos aquí -->
+        </tbody>
+      </table>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="script.js"></script>
+    <h2 class="mt-5 mb-3">Galería de Panes de Temporada</h2>
+    <div class="row g-3" id="galeria">
+      <!-- Imágenes de panes -->
+    </div>
+  </main>
+
+  <!-- Modal producto (igual que tenías) -->
+  <div class="modal fade" id="modalProducto" tabindex="-1" aria-labelledby="modalProductoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formProducto" enctype="multipart/form-data">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalProductoLabel">Agregar/Editar Pan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="id_producto" name="id_producto">
+            <div class="row g-2">
+              <div class="col-12 col-md-6 mb-3">
+                <label for="nombre" class="form-label fw-semibold">Nombre</label>
+                <input type="text" class="form-control rounded-pill" id="nombre" name="nombre" required>
+              </div>
+              <div class="col-12 col-md-6 mb-3">
+                <label for="precio" class="form-label fw-semibold">Precio ($)</label>
+                <input type="number" class="form-control rounded-pill" id="precio" name="precio" min="1" step="0.01" required>
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col-12 col-md-6 mb-3">
+                <label for="stock" class="form-label fw-semibold">Stock</label>
+                <input type="number" class="form-control rounded-pill" id="stock" name="stock" min="0" required>
+              </div>
+              <div class="col-12 col-md-6 mb-3">
+                <label for="imagen" class="form-label fw-semibold">Imagen</label>
+                <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="descripcion" class="form-label fw-semibold">Descripción</label>
+              <textarea class="form-control rounded-4" id="descripcion" name="descripcion" rows="2"></textarea>
+            </div>
+            <div id="mensajeError" class="alert alert-danger d-none"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal carrito -->
+  <div class="modal fade" id="modalCarrito" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tu carrito</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="carritoItems"></div>
+          <div class="text-end mt-3">
+            <strong>Total: $<span id="carritoTotal">0.00</span></strong>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btnCheckout" class="btn btn-success">Pagar / Checkout</button>
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white text-center py-3 mt-5">
+    <small>&copy; 2025 Panadería La Desesperanza</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
