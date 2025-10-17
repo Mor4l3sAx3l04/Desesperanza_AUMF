@@ -1,6 +1,7 @@
 // script.js - Frontend con auth, carrito y rol-based UI
 
 document.addEventListener('DOMContentLoaded', () => {
+
   // elementos auth
   window.formRegister = document.getElementById('formRegister');
   window.formLogin = document.getElementById('formLogin');
@@ -404,6 +405,56 @@ document.getElementById('btnCheckout').addEventListener('click', async () => {
   cargarCarrito();
   actualizarBadge();
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCarrito')).hide();
+});
+
+// script.js
+document.addEventListener("DOMContentLoaded", () => {
+  const formRegister = document.getElementById("formRegister");
+  const authError = document.getElementById("authError");
+
+  if (formRegister) {
+    formRegister.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nombre = document.getElementById("regNombre").value.trim();
+      const email = document.getElementById("regEmail").value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+      const rol = document.getElementById("rolInput").value;
+
+      if (!nombre || !email || !password) {
+        mostrarError("Todos los campos son obligatorios.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, email, password, rol }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || "Error al registrar.");
+
+        alert("✅ Registro exitoso. ¡Bienvenido!");
+        authError.classList.add("d-none");
+
+        console.log("Usuario registrado:", data.user);
+
+        // Si quieres cerrar el formulario y mostrar la app:
+        document.getElementById("authOverlay").style.display = "none";
+        document.getElementById("mainApp").style.display = "block";
+      } catch (err) {
+        mostrarError(err.message);
+      }
+    });
+  }
+
+  function mostrarError(msg) {
+    authError.textContent = msg;
+    authError.classList.remove("d-none");
+  }
 });
 
 // ---------- util ----------

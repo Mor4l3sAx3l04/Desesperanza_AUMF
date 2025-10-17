@@ -63,11 +63,10 @@ app.post("/register", async (req, res) => {
 
         const hashed = await bcrypt.hash(password, 10);
         const [result] = await con.promise().query(
-            "INSERT INTO usuario (nombre, email, password, rol) VALUES (?, ?, ?, ?)",
+            "INSERT INTO usuario (nombre, email, password, rol) VALUES (?, ?, ?, 'cliente')",
             [nombre, email, hashed, rol]
         );
-        // iniciar sesión automáticamente
-        req.session.user = { id_usuario: result.insertId, nombre, email, rol };
+        req.session.user = { id_usuario: result.insertId, nombre, email, rol: 'cliente' };
         return res.json({ mensaje: "Registrado correctamente.", user: req.session.user });
     } catch (err) {
         console.error(err);
