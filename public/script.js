@@ -154,18 +154,19 @@ function actualizarPerfilDropdown() {
   liNombre.innerHTML = `<h6 class="dropdown-header">${escapeHtml(currentUser.nombre)}</h6>`;
   menu.appendChild(liNombre);
   if (currentUser.rol === 'admin') {
-    const liAdmin = document.createElement('li');
-    liAdmin.innerHTML = `<a class="dropdown-item" href="#" id="adminPanel">Panel admin</a>`;
-    menu.appendChild(liAdmin);
-    // admin panel can open product modal for add
-    setTimeout(() => {
-      const btn = document.getElementById('adminPanel');
-      if (btn) btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        new bootstrap.Modal(document.getElementById('modalProducto')).show();
-      });
-    }, 10);
-  }
+  const liGestionUsuarios = document.createElement('li');
+  liGestionUsuarios.innerHTML = `<a class="dropdown-item" href="#" id="gestionarUsuarios">Gestionar usuarios</a>`;
+  menu.appendChild(liGestionUsuarios);
+
+  setTimeout(() => {
+    const btnGU = document.getElementById('gestionarUsuarios');
+    if (btnGU) btnGU.addEventListener('click', (e) => {
+      e.preventDefault();
+      cargarUsuarios();
+      new bootstrap.Modal(document.getElementById('modalUsuarios')).show();
+    });
+  }, 10);
+}
   const liLogout = document.createElement('li');
   liLogout.innerHTML = `<hr class="dropdown-divider"><a class="dropdown-item" href="#" id="logoutBtn2">Cerrar sesión</a>`;
   menu.appendChild(liLogout);
@@ -298,7 +299,11 @@ function borrarProducto(id) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id_producto: id })
   }).then(r => r.json()).then(resp => {
-    if (resp.error) alert(resp.error); else cargarProductos();
+    if (resp.error) showToast(resp.error, "error");
+    else {
+      cargarProductos();
+      showToast("Producto eliminado", "success");
+    }
   });
 }
 
@@ -335,9 +340,8 @@ async function agregarAlCarrito(id_producto) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id_producto, cantidad })
   }).then(r => r.json());
-  if (resp.error) return alert(resp.error);
-  actualizarBadge();
-  alert('Agregado al carrito.');
+  if (resp.error) return showToast(resp.error, "error");
+  showToast('Agregado al carrito.', "success");
 }
 
 async function cargarCarrito() {
@@ -370,7 +374,7 @@ async function cargarCarrito() {
       const r = await fetch('/carrito/actualizar', {
         method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_carrito: id, cantidad })
       }).then(r => r.json());
-      if (r.error) alert(r.error);
+      if (r.error) showToast(r.error, "error");
       cargarCarrito();
       actualizarBadge();
     });
@@ -399,8 +403,8 @@ async function actualizarBadge() {
 // checkout
 document.getElementById('btnCheckout').addEventListener('click', async () => {
   const r = await fetch('/carrito/checkout', { method: 'POST' }).then(r => r.json());
-  if (r.error) return alert(r.error);
-  alert(r.mensaje || 'Compra exitosa');
+  if (r.error) return showToast(r.error, "error");
+  showToast(r.mensaje || "Compra exitosa", "success");
   cargarProductos();
   cargarCarrito();
   actualizarBadge();
@@ -456,6 +460,122 @@ document.addEventListener("DOMContentLoaded", () => {
     authError.classList.remove("d-none");
   }
 });
+
+document.getElementById("btnConocenos").addEventListener("click", () => {
+  new bootstrap.Modal(document.getElementById("modalConocenos")).show();
+});
+
+async function cargarUsuarios() {
+  const res = await fetch('/usuarios');
+  const usuarios = await res.json();
+  const tbody = document.getElementById('usuariosTabla');
+  tbody.innerHTML = '';
+  usuarios.forEach((u, i) => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(u.nombre)}</td>
+        <td>${escapeHtml(u.email)}</td>
+        <td>${u.rol}</td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="eliminarUsuario(${u.id_usuario})">Eliminar</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+async function eliminarUsuario(id) {
+  if (!confirm('¿Seguro que deseas eliminar este usuario?')) return;
+  const res = await fetch('/usuarios/eliminar', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ id })
+  }).then(r=>r.json());
+  if (res.error) alert(res.error);
+  else cargarUsuarios();
+}
+
+document.getElementById("formNuevoUsuario").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nombre = document.getElementById("nuevoNombre").value.trim();
+  const email = document.getElementById("nuevoEmail").value.trim();
+  const rol = document.getElementById("nuevoRol").value;
+  if (!nombre || !email) return;
+
+  const res = await fetch("/usuarios/agregar", {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ nombre, email, rol })
+  }).then(r=>r.json());
+
+  if (res.error) alert(res.error);
+  else {
+    document.getElementById("formNuevoUsuario").reset();
+    cargarUsuarios();
+  }
+});
+
+// Reset password
+document.getElementById("formResetPassword").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById("resetNombre").value.trim();
+    const email = document.getElementById("resetEmail").value.trim();
+    const newPassword = document.getElementById("resetPassword").value;
+
+    try {
+        const res = await fetch("/resetPassword", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nombre, email, newPassword })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast("Contraseña cambiada correctamente. Ya puedes iniciar sesión.", "success");
+        } else {
+            showToast(data.error, "error");
+        }
+
+    } catch (err) {
+        showToast("Error al conectar con el servidor.", "error");
+    }
+});
+
+// Función para mostrar notificaciones flotantes
+function showToast(message, type = "success") {
+    const container = document.getElementById("toast-container");
+
+    // id único
+    const id = "toast-" + Date.now();
+
+    // Colores según tipo
+    let bg = "bg-success";
+    if (type === "error") bg = "bg-danger";
+    if (type === "info") bg = "bg-primary";
+    if (type === "warning") bg = "bg-warning text-dark";
+
+    // Crear toast
+    const toast = document.createElement("div");
+    toast.id = id;
+    toast.className = `toast align-items-center text-white ${bg} border-0 mb-2 show`;
+    toast.role = "alert";
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    // Desaparecer automático a los 3 segundos
+    setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 300); // dar tiempo a animación
+    }, 3000);
+}
+
 
 // ---------- util ----------
 function escapeHtml(unsafe) {

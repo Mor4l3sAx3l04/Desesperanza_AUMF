@@ -63,10 +63,10 @@ app.post("/register", async (req, res) => {
 
         const hashed = await bcrypt.hash(password, 10);
         const [result] = await con.promise().query(
-            "INSERT INTO usuario (nombre, email, password, rol) VALUES (?, ?, ?, 'cliente')",
+            "INSERT INTO usuario (nombre, email, password, rol) VALUES (?, ?, ?, ?)",
             [nombre, email, hashed, rol]
         );
-        req.session.user = { id_usuario: result.insertId, nombre, email, rol: 'cliente' };
+        req.session.user = { id_usuario: result.insertId, nombre, email, rol };
         return res.json({ mensaje: "Registrado correctamente.", user: req.session.user });
     } catch (err) {
         console.error(err);
@@ -269,7 +269,7 @@ app.get("/carrito", async (req, res) => {
     try {
         const [rows] = await con.promise().query(
             `SELECT c.id_carrito, c.cantidad, p.id_producto, p.nombre, p.precio 
-             FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = ?`,
+            FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = ?`,
             [id_usuario]
         );
         return res.json({ items: rows });
@@ -317,37 +317,179 @@ app.post("/carrito/eliminar", async (req, res) => {
 });
 
 // Checkout: descontar stock y vaciar carrito del usuario (transacción simple)
+// Checkout: descontar stock, guardar venta y vaciar carrito
 app.post("/carrito/checkout", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: "No autenticado." });
     const id_usuario = req.session.user.id_usuario;
     const connection = con.promise();
+
     try {
         await connection.query("START TRANSACTION");
+
+        // Obtener carrito con bloqueo
         const [items] = await connection.query(
-            `SELECT c.id_carrito, c.cantidad, p.id_producto, p.stock 
-             FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = ? FOR UPDATE`,
+            `SELECT c.id_carrito, c.cantidad, p.id_producto, p.stock, p.precio 
+            FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = ? FOR UPDATE`,
             [id_usuario]
         );
+
         if (items.length === 0) {
             await connection.query("ROLLBACK");
             return res.status(400).json({ error: "Carrito vacío." });
         }
+
+        // Verificar stock
         for (const it of items) {
             if (it.stock < it.cantidad) {
                 await connection.query("ROLLBACK");
                 return res.status(400).json({ error: `No hay suficiente stock para ${it.id_producto}.` });
             }
-            await connection.query("UPDATE producto SET stock = stock - ? WHERE id_producto = ?", [it.cantidad, it.id_producto]);
         }
+
+        // Crear venta
+        const [venta] = await connection.query("INSERT INTO venta (id_usuario) VALUES (?)", [id_usuario]);
+        const id_venta = venta.insertId;
+
+        // Insertar detalle y actualizar stock
+        for (const it of items) {
+            await connection.query(
+                "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio) VALUES (?, ?, ?, ?)",
+                [id_venta, it.id_producto, it.cantidad, it.precio]
+            );
+            await connection.query(
+                "UPDATE producto SET stock = stock - ? WHERE id_producto = ?",
+                [it.cantidad, it.id_producto]
+            );
+        }
+
+        // Vaciar carrito
         await connection.query("DELETE FROM carrito WHERE id_usuario = ?", [id_usuario]);
+
         await connection.query("COMMIT");
         return res.json({ mensaje: "Compra realizada con éxito." });
+
     } catch (err) {
         console.error(err);
         try { await connection.query("ROLLBACK"); } catch(e){}
         return res.status(500).json({ error: "Error en checkout." });
     }
 });
+
+// Obtener ventas totales por producto (solo admin)
+app.get("/ventas", async (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
+    try {
+        const [rows] = await con.promise().query(
+            `SELECT p.id_producto, p.nombre, SUM(d.cantidad) as total_vendido, SUM(d.cantidad * d.precio) as total_ingresos
+            FROM detalle_venta d
+            JOIN producto p ON d.id_producto = p.id_producto
+            GROUP BY p.id_producto, p.nombre
+            ORDER BY total_vendido DESC`
+        );
+        return res.json(rows);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error al obtener ventas." });
+    }
+});
+
+app.get("/usuarios", async (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
+    try {
+        const [rows] = await con.promise().query("SELECT id_usuario, nombre, email, rol FROM usuario");
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error al obtener usuarios." });
+    }
+});
+
+app.post("/usuarios/agregar", async (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
+    let { nombre, email, rol } = req.body;
+    nombre = sanitizeInput(nombre);
+    email = sanitizeInput(email);
+    rol = rol === "admin" ? "admin" : "cliente";
+
+    try {
+        // validar que no exista email
+        const [rows] = await con.promise().query("SELECT id_usuario FROM usuario WHERE email=?", [email]);
+        if (rows.length > 0) {
+            return res.status(400).json({ error: "Email ya registrado." });
+        }
+
+        // contraseña por defecto
+        const defaultPassword = "123456";
+        const hashed = await bcrypt.hash(defaultPassword, 10);
+
+        await con.promise().query(
+            "INSERT INTO usuario (nombre, email, password, rol) VALUES (?, ?, ?, ?)",
+            [nombre, email, hashed, rol]
+        );
+
+        res.json({ 
+            mensaje: "Usuario agregado correctamente.", 
+            passwordTemporal: defaultPassword 
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error al agregar usuario." });
+    }
+});
+
+
+app.post("/usuarios/eliminar", async (req, res) => {
+    if (!req.session.user || req.session.user.rol !== 'admin') {
+        return res.status(403).json({ error: "Acceso denegado." });
+    }
+    const { id } = req.body;
+    try {
+        await con.promise().query("DELETE FROM usuario WHERE id_usuario=?", [id]);
+        res.json({ mensaje: "Usuario eliminado." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Error al eliminar usuario." });
+    }
+});
+
+// Restablecer contraseña
+app.post("/resetPassword", async (req, res) => {
+    let { nombre, email, newPassword } = req.body;
+    nombre = sanitizeInput(nombre);
+    email = sanitizeInput(email);
+
+    if (!nombre || !email || !newPassword) {
+        return res.status(400).json({ error: "Todos los campos son obligatorios." });
+    }
+
+    try {
+        const [rows] = await con.promise().query(
+            "SELECT id_usuario FROM usuario WHERE nombre = ? AND email = ?",
+            [nombre, email]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "No se encontró usuario con esos datos." });
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await con.promise().query(
+            "UPDATE usuario SET password = ? WHERE id_usuario = ?",
+            [hashed, rows[0].id_usuario]
+        );
+
+        return res.json({ mensaje: "Contraseña actualizada correctamente." });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Error al restablecer contraseña." });
+    }
+});
+
 
 // --- Puerto ---
 app.listen(10000, () => {
