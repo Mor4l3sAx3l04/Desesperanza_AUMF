@@ -1,45 +1,293 @@
-body {
-  background: linear-gradient(135deg, #fffbe7 0%, #ffe5ec 100%);
-  min-height: 100vh;
-}
-header {
-  background: linear-gradient(90deg, #ffb347 0%, #ffcc80 100%);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-footer { background: #222; color: #fff; }
-.table thead th { background: #ffb347 !important; color: #222; font-weight: bold; }
-.btn-success { background: linear-gradient(90deg, #ffb347 0%, #ffcc80 100%); border: none; color: #222; font-weight: bold; }
-.btn-success:hover { background: linear-gradient(90deg, #ffcc80 0%, #ffb347 100%); color: #222; }
-.card { border: none; border-radius: 1rem; overflow: hidden; box-shadow: 0 2px 8px rgba(255,179,71,0.15); transition: transform 0.2s; }
-.card:hover { transform: scale(1.04); box-shadow: 0 6px 24px rgba(255,179,71,0.25); }
-.card-img-top { height: 160px; object-fit: cover; border-bottom: 2px solid #ffb347; }
-.modal-content { border-radius: 1rem; }
-#mensajeError { font-size: 0.95rem; }
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+    
+    * {
+      font-family: 'Poppins', sans-serif;
+    }
 
-/* Auth overlay styles */
-#authOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;           /* ⚠ flex para centrar */
-  justify-content: center; /* horizontal */
-  align-items: center;     /* vertical */
-  background-color: rgba(0,0,0,0.5);
-  z-index: 9999;
-}
-#authOverlay form {
-  width: 100%;
-  max-width: 400px;
-}
+    body {
+      background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+      min-height: 100vh;
+    }
 
-.auth-card {
-  width: 100%;
-  max-width: 900px;
-  background: #fff;
-}
-.auth-left { width: 50%; overflow: hidden; }
-.auth-left img { width: 100%; height: 100%; object-fit: cover; display:block; }
-.auth-right { width: 52%; background: linear-gradient(180deg,#fff 0%, #fff 100%); }
-#badgeCarrito { display: none; font-size: 0.75rem; }
+    /* Header mejorado */
+    header {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+      border-bottom: 3px solid #e65100;
+    }
+
+    header h1 {
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      color: white !important;
+    }
+
+    header small {
+      color: rgba(255,255,255,0.95) !important;
+    }
+
+    /* Botones del header */
+    .btn-header {
+      background: white;
+      color: #ff9800;
+      border: 2px solid white;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .btn-header:hover {
+      background: #ff9800;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* Auth overlay mejorado */
+    .auth-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255,152,0,0.95) 0%, rgba(245,124,0,0.95) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .auth-card {
+      max-width: 900px;
+      width: 100%;
+      background: white;
+      overflow: hidden;
+      animation: slideIn 0.5s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .auth-left {
+      background: linear-gradient(135deg, rgba(255,152,0,0.9), rgba(245,124,0,0.9));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-left img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.3;
+    }
+
+    .auth-right {
+      background: white;
+    }
+
+    /* Cards mejoradas */
+    .card {
+      transition: all 0.3s ease;
+      border: none !important;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+
+    /* Tabla mejorada */
+    .table-responsive {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .table thead {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
+    }
+
+    .table thead th {
+      color: white !important;
+      font-weight: 600;
+      border: none !important;
+      padding: 15px !important;
+    }
+
+    .table tbody tr {
+      transition: all 0.3s ease;
+    }
+
+    .table tbody tr:hover {
+      background: #fff3e0 !important;
+      transform: scale(1.01);
+    }
+
+    /* Botones mejorados */
+    .btn-primary {
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+      border: none;
+      font-weight: 600;
+      padding: 10px 25px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(33,150,243,0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+      border: none;
+      font-weight: 600;
+      padding: 10px 25px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(76,175,80,0.4);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 10px 25px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-warning:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255,152,0,0.4);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      border: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(244,67,54,0.4);
+    }
+
+    /* Badge carrito */
+    #badgeCarrito {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* Galería mejorada */
+    #galeria .card {
+      border-radius: 15px;
+      overflow: hidden;
+      background: white;
+    }
+
+    #galeria .card-img-top {
+      transition: all 0.3s ease;
+    }
+
+    #galeria .card:hover .card-img-top {
+      transform: scale(1.1);
+    }
+
+    /* Modales mejorados */
+    .modal-content {
+      border-radius: 20px;
+      border: none;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      color: white;
+      border: none;
+      padding: 20px 30px;
+    }
+
+    .modal-footer {
+      border: none;
+      padding: 20px 30px;
+    }
+
+    /* Forms mejorados */
+    .form-control, .form-select {
+      border: 2px solid #e0e0e0;
+      padding: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #ff9800;
+      box-shadow: 0 0 0 0.2rem rgba(255,152,0,0.25);
+    }
+
+    /* Toast mejorado */
+    .toast {
+      backdrop-filter: blur(10px);
+    }
+
+    /* Títulos */
+    h2 {
+      color: #ff9800;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+      position: relative;
+      padding-bottom: 10px;
+    }
+
+    h2::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      border-radius: 2px;
+    }
+
+    /* Footer mejorado */
+    footer {
+      background: linear-gradient(135deg, #212121 0%, #424242 100%) !important;
+      margin-top: 50px !important;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    }
+
+    /* Animaciones */
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Sección de título mejorada */
+    .section-title {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      margin-bottom: 30px;
+    }

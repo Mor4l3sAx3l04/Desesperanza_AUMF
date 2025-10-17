@@ -185,7 +185,7 @@ function cargarProductos() {
       tbody.innerHTML = '';
       productos.forEach((prod, idx) => {
         const imgSrc = prod.tieneImagen
-        ? `/imagen/${prod.id_producto}`
+        ? `/imagen/${prod.id_producto}?t=${Date.now()}`
         : 'https://via.placeholder.com/150?text=Sin+Imagen';
 
         // acciones: si admin -> editar/borrar; si cliente -> agregar al carrito
@@ -333,7 +333,7 @@ function cargarGaleria() {
 
 // ---------- Carrito (frontend) ----------
 async function agregarAlCarrito(id_producto) {
-  if (!currentUser) return alert('Debes iniciar sesión para agregar al carrito.');
+  if (!currentUser) return showToast('Debes iniciar sesión para agregar al carrito.', "warning");
   const cantidad = 1;
   const resp = await fetch('/carrito/agregar', {
     method: 'POST',
@@ -342,6 +342,7 @@ async function agregarAlCarrito(id_producto) {
   }).then(r => r.json());
   if (resp.error) return showToast(resp.error, "error");
   showToast('Agregado al carrito.', "success");
+  actualizarBadge();
 }
 
 async function cargarCarrito() {
@@ -441,14 +442,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!res.ok) throw new Error(data.error || "Error al registrar.");
 
-        alert("✅ Registro exitoso. ¡Bienvenido!");
+        showToast("✅ Registro exitoso. Ahora inicia sesión.", "success");
         authError.classList.add("d-none");
 
         console.log("Usuario registrado:", data.user);
 
-        // Si quieres cerrar el formulario y mostrar la app:
-        document.getElementById("authOverlay").style.display = "none";
-        document.getElementById("mainApp").style.display = "block";
+        // Cambiar a la vista de login
+        showLogin();
       } catch (err) {
         mostrarError(err.message);
       }
@@ -458,7 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function mostrarError(msg) {
     authError.textContent = msg;
     authError.classList.remove("d-none");
-  }
+  }
 });
 
 document.getElementById("btnConocenos").addEventListener("click", () => {
@@ -492,7 +492,7 @@ async function eliminarUsuario(id) {
     headers: { 'Content-Type':'application/json' },
     body: JSON.stringify({ id })
   }).then(r=>r.json());
-  if (res.error) alert(res.error);
+  if (res.error) showToast(res.error, "error");
   else cargarUsuarios();
 }
 
@@ -509,7 +509,7 @@ document.getElementById("formNuevoUsuario").addEventListener("submit", async (e)
     body: JSON.stringify({ nombre, email, rol })
   }).then(r=>r.json());
 
-  if (res.error) alert(res.error);
+  if (res.error) showToast(res.error, "error");
   else {
     document.getElementById("formNuevoUsuario").reset();
     cargarUsuarios();
@@ -575,7 +575,6 @@ function showToast(message, type = "success") {
         setTimeout(() => toast.remove(), 300); // dar tiempo a animación
     }, 3000);
 }
-
 
 // ---------- util ----------
 function escapeHtml(unsafe) {
