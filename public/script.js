@@ -176,15 +176,14 @@ function actualizarPerfilDropdown() {
   }, 10);
 }
 
-// ---------- Productos (adaptado de tu versión) ----------
 function cargarProductos() {
-  fetch('/obtenerProductos')
+  fetch('/productos')  // 👈 AGREGUÉ LA /
     .then(res => res.json())
     .then(productos => {
       const tbody = document.querySelector('#tablaProductos tbody');
       tbody.innerHTML = '';
       productos.forEach((prod, idx) => {
-        const imgSrc = prod.tieneImagen
+        const imgSrc = prod.tiene_imagen  // 👈 CAMBIÉ A tiene_imagen
         ? `/imagen/${prod.id_producto}?t=${Date.now()}`
         : 'https://via.placeholder.com/150?text=Sin+Imagen';
 
@@ -193,10 +192,10 @@ function cargarProductos() {
         if (currentUser && currentUser.rol === 'admin') {
           acciones = `
             <button class="btn btn-sm btn-warning me-1 btn-editar" data-prod='${JSON.stringify(prod).replace(/'/g, "&#39;")}' type="button">Editar</button>
-            <button class="btn btn-sm btn-danger" onclick="borrarProducto(${prod.id_producto})">Borrar</button>
+            <button class="btn btn-sm btn-danger btn-borrar" data-id="${prod.id_producto}" type="button">Borrar</button>
           `;
         } else {
-          acciones = `<button class="btn btn-sm btn-primary" onclick="agregarAlCarrito(${prod.id_producto})" ${prod.stock<=0? 'disabled':''}>Agregar al carrito</button>`;
+          acciones = `<button class="btn btn-sm btn-primary btn-agregar-carrito" data-id="${prod.id_producto}" ${prod.stock<=0? 'disabled':''}>Agregar al carrito</button>`;
         }
         tbody.innerHTML += `
           <tr>
@@ -210,10 +209,23 @@ function cargarProductos() {
           </tr>
         `;
       });
-      // Asignar eventos a los botones editar
+      
+      // 👇 ASIGNAR EVENTOS A LOS BOTONES DESPUÉS DE CREARLOS
       document.querySelectorAll('.btn-editar').forEach(btn => {
         btn.addEventListener('click', function() {
           editarProducto(this.getAttribute('data-prod'));
+        });
+      });
+      
+      document.querySelectorAll('.btn-borrar').forEach(btn => {
+        btn.addEventListener('click', function() {
+          borrarProducto(this.getAttribute('data-id'));
+        });
+      });
+      
+      document.querySelectorAll('.btn-agregar-carrito').forEach(btn => {
+        btn.addEventListener('click', function() {
+          agregarAlCarrito(this.getAttribute('data-id'));
         });
       });
     });
@@ -338,7 +350,7 @@ async function agregarAlCarrito(id_producto) {
   const resp = await fetch('/carrito/agregar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_producto, cantidad })
+    body: JSON.stringify({ id_producto: Number(id_producto), cantidad })  // 👈 CONVERTIR A NÚMERO
   }).then(r => r.json());
   if (resp.error) return showToast(resp.error, "error");
   showToast('Agregado al carrito.', "success");
