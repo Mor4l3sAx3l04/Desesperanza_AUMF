@@ -4,18 +4,556 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Panadería La Desesperanza - Inventario de Panes</title>
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --elegant-gold: #d4af37;
+      --rich-brown: #3e2723;
+      --cream: #faf8f3;
+      --soft-gray: #6d6d6d;
+      --accent-copper: #b87333;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+      min-height: 100vh;
+      font-family: 'Lato', sans-serif;
+      color: var(--rich-brown);
+    }
+
+    h1, h2, h3, h4, h5, h6, .display-5 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+
+    .animate-fade-in {
+      animation: fadeInUp 1s ease-out;
+    }
+
+    /* Header Elegante */
+    header {
+      background: linear-gradient(135deg, #3e2723 0%, #5d4037 50%, #3e2723 100%);
+      border-bottom: 2px solid var(--elegant-gold);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 200%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+      animation: shimmer 3s infinite;
+    }
+
+    header h1 {
+      color: var(--elegant-gold);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+      letter-spacing: 2px;
+      position: relative;
+    }
+
+    header small {
+      color: #e0d4c3;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+
+    .btn-header {
+      background: transparent;
+      color: var(--elegant-gold);
+      border: 1.5px solid var(--elegant-gold);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: var(--elegant-gold);
+      transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: -1;
+    }
+
+    .btn-header:hover {
+      color: var(--rich-brown);
+      border-color: var(--elegant-gold);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
+    }
+
+    .btn-header:hover::before {
+      left: 0;
+    }
+
+    /* Cards Elegantes */
+    .card {
+      border: none;
+      border-radius: 2px;
+      overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      background: white;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 0;
+      background: var(--elegant-gold);
+      transition: height 0.5s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+
+    .card:hover::before {
+      height: 100%;
+    }
+
+    /* Tabla Elegante */
+    .table-responsive {
+      background: white;
+      border-radius: 2px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      border-top: 3px solid var(--elegant-gold);
+    }
+
+    .table thead {
+      background: linear-gradient(135deg, var(--rich-brown) 0%, #5d4037 100%);
+      color: var(--elegant-gold);
+    }
+
+    .table thead th {
+      border: none;
+      padding: 18px;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      font-family: 'Lato', sans-serif;
+    }
+
+    .table tbody tr {
+      transition: all 0.3s ease;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .table tbody tr:hover {
+      background: linear-gradient(to right, transparent, rgba(212, 175, 55, 0.05), transparent);
+      transform: scale(1.005);
+    }
+
+    .table tbody td {
+      vertical-align: middle;
+      padding: 20px 18px;
+      font-weight: 400;
+    }
+
+    /* Botones Elegantes */
+    .btn {
+      border-radius: 2px;
+      padding: 12px 32px;
+      font-weight: 500;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:hover::after {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+      box-shadow: 0 4px 16px rgba(46, 125, 50, 0.3);
+    }
+
+    .btn-success:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(46, 125, 50, 0.4);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, var(--elegant-gold) 0%, var(--accent-copper) 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+    }
+
+    .btn-warning:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(212, 175, 55, 0.5);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);
+      box-shadow: 0 4px 16px rgba(198, 40, 40, 0.3);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+      box-shadow: 0 4px 16px rgba(21, 101, 192, 0.3);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #546e7a 0%, #607d8b 100%);
+    }
+
+    /* Modal Elegante */
+    .modal-content {
+      border: none;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      border-top: 4px solid var(--elegant-gold);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, var(--rich-brown) 0%, #5d4037 100%);
+      color: var(--elegant-gold);
+      padding: 28px 32px;
+      border: none;
+      position: relative;
+    }
+
+    .modal-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(to right, transparent, var(--elegant-gold), transparent);
+    }
+
+    .modal-body {
+      padding: 35px;
+      background: white;
+    }
+
+    .form-control, .form-select {
+      border-radius: 0;
+      border: none;
+      border-bottom: 2px solid #e0e0e0;
+      padding: 14px 8px;
+      transition: all 0.3s ease;
+      background: transparent;
+      font-weight: 300;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-bottom-color: var(--elegant-gold);
+      box-shadow: 0 2px 0 0 rgba(212, 175, 55, 0.2);
+      background: transparent;
+    }
+
+    .form-label {
+      color: var(--soft-gray);
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+    }
+
+    /* Section Titles Elegantes */
+    .section-title {
+      background: white;
+      padding: 30px;
+      border-radius: 0;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--elegant-gold);
+      position: relative;
+    }
+
+    .section-title h2 {
+      color: var(--rich-brown);
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .section-title p {
+      color: var(--soft-gray);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* Gallery Cards Elegantes */
+    .gallery-card {
+      border-radius: 0;
+      overflow: hidden;
+      position: relative;
+      height: 350px;
+      background-size: cover;
+      background-position: center;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+
+    .gallery-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, transparent 0%, rgba(62,39,35,0.9) 100%);
+      transition: all 0.5s ease;
+    }
+
+    .gallery-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 3px;
+      background: var(--elegant-gold);
+      transition: width 0.5s ease;
+    }
+
+    .gallery-card:hover::before {
+      background: linear-gradient(180deg, rgba(212,175,55,0.2) 0%, rgba(62,39,35,0.95) 100%);
+    }
+
+    .gallery-card:hover::after {
+      width: 100%;
+    }
+
+    .gallery-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+    }
+
+    .gallery-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 25px;
+      color: white;
+      z-index: 1;
+    }
+
+    .gallery-content h5 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* Footer Elegante */
+    footer {
+      background: linear-gradient(135deg, var(--rich-brown) 0%, #5d4037 100%);
+      margin-top: 60px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      border-top: 2px solid var(--elegant-gold);
+    }
+
+    footer p, footer small {
+      color: #e0d4c3 !important;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* Badge Elegante */
+    .badge {
+      border-radius: 10px;
+      font-size: 0.7rem;
+      padding: 0.4em 0.6em;
+      font-weight: 600;
+    }
+
+    /* Imagen de producto */
+    .product-img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border: 2px solid var(--cream);
+    }
+
+    /* Dropdown Elegante */
+    .dropdown-menu {
+      border-radius: 0;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      padding: 8px;
+      background: white;
+    }
+
+    .dropdown-item {
+      border-radius: 0;
+      padding: 12px 18px;
+      transition: all 0.3s ease;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+    }
+
+    .dropdown-item:hover {
+      background: linear-gradient(to right, transparent, rgba(212, 175, 55, 0.1));
+      color: var(--rich-brown);
+      padding-left: 24px;
+    }
+
+    /* Auth overlay elegante */
+    #authOverlay .card {
+      border-radius: 0;
+      border: none;
+      border-top: 4px solid var(--elegant-gold);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    #authOverlay .card-body {
+      padding: 50px !important;
+    }
+
+    #authOverlay h2 {
+      font-size: 2.2rem;
+      color: var(--rich-brown);
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    #authOverlay .btn {
+      padding: 16px;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+    }
+
+    #authOverlay a {
+      color: var(--elegant-gold);
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    #authOverlay a:hover {
+      color: var(--accent-copper);
+      letter-spacing: 1px;
+    }
+
+    /* Divider elegante */
+    hr {
+      border: none;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--elegant-gold), transparent);
+      margin: 30px 0;
+    }
+
+    /* Alert elegante */
+    .alert {
+      border-radius: 0;
+      border: none;
+      border-left: 4px solid;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+    }
+
+    .alert-danger {
+      border-left-color: #c62828;
+      background: rgba(198, 40, 40, 0.08);
+      color: #c62828;
+    }
+
+    .alert-success {
+      border-left-color: #2e7d32;
+      background: rgba(46, 125, 50, 0.08);
+      color: #2e7d32;
+    }
+
+    /* Scroll elegante */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--cream);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--elegant-gold);
+      border-radius: 0;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-copper);
+    }
+  </style>
 </head>
 <body>
-  <header class="text-center py-4 mb-4 shadow-lg position-relative">
+  <header class="text-center py-4 mb-5 position-relative">
     <div class="container">
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div class="text-start">
-          <h1 class="display-5 fw-bold mb-1">🍞 Panadería La Desesperanza</h1>
-          <small class="lead">¡Panes de temporada Día de Muertos y Halloween! 🎃</small>
+          <h1 class="display-5 fw-bold mb-1">🍞 PANADERÍA LA DESESPERANZA</h1>
+          <small class="lead">Panes de Temporada · Día de Muertos & Halloween</small>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
           <button id="btnConocenos" class="btn btn-header btn-sm shadow-sm" title="Conócenos">
             <i class="bi bi-book"></i> Conócenos
           </button>
@@ -44,58 +582,68 @@
         <source src="panaderia.mp4" type="video/mp4">
       </video>
 
-      <!-- Capa oscura -->
-      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 2;"></div>
+      <!-- Capa oscura elegante -->
+      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(62,39,35,0.85) 0%, rgba(93,64,55,0.9) 100%); z-index: 2;"></div>
 
       <!-- Contenedor del formulario -->
       <div class="container" style="position: relative; z-index: 100;">
         <div class="row justify-content-center">
           <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
             
-            <div class="card border-0 shadow-lg" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: fadeInUp 0.6s ease;">
-              <div class="card-body p-4">
+            <div class="card shadow-lg" style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); animation: fadeInUp 0.8s ease;">
+              <div class="card-body">
                 
                 <div class="text-center mb-4">
-                  <h2 id="authTitle" class="fw-bold text-warning">🍞 Crear cuenta</h2>
-                  <p class="text-muted">Únete a nuestra comunidad panaderil</p>
+                  <h2 id="authTitle" class="fw-bold">CREAR CUENTA</h2>
+                  <p class="text-muted" style="font-weight: 300; letter-spacing: 1px;">Únete a nuestra comunidad panaderil</p>
                 </div>
 
                 <!-- Formulario de registro -->
                 <form id="formRegister">
                   <input type="hidden" name="rol" id="rolInput" value="cliente">
-                  <div class="mb-3">
-                    <label class="form-label fw-semibold">Nombre</label>
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold"><i class="bi bi-person"></i> Nombre</label>
                     <input name="nombre" id="regNombre" class="form-control" placeholder="Tu nombre completo" required />
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label fw-semibold">Email</label>
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold"><i class="bi bi-envelope"></i> Email</label>
                     <input name="email" id="regEmail" type="email" class="form-control" placeholder="correo@ejemplo.com" required />
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label fw-semibold">Contraseña</label>
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold"><i class="bi bi-lock"></i> Contraseña</label>
                     <input name="password" id="regPassword" type="password" class="form-control" placeholder="••••••••" required />
                   </div>
-                  <div class="mb-3 text-center">
-                    <a href="#" id="switchToLogin" class="text-decoration-none">¿Ya tienes cuenta? Iniciar sesión</a>
+                  <button class="btn btn-warning w-100 mb-4" type="submit">
+                    <i class="bi bi-check-circle"></i> Registrarme
+                  </button>
+                  <div class="text-center">
+                    <a href="#" id="switchToLogin" class="text-decoration-none">
+                      ¿Ya tienes cuenta? Iniciar sesión
+                    </a>
                   </div>
-                  <button class="btn btn-warning w-100 py-3 fw-bold" type="submit">Registrarme</button>
                   <div id="authError" class="alert alert-danger mt-3 d-none"></div>
                 </form>
 
                 <!-- Formulario de login -->
                 <form id="formLogin" class="d-none">
-                  <div class="mb-3">
-                    <label class="form-label fw-semibold">Email</label>
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold"><i class="bi bi-envelope"></i> Email</label>
                     <input id="logEmail" type="email" class="form-control" placeholder="correo@ejemplo.com" required />
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label fw-semibold">Contraseña</label>
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold"><i class="bi bi-lock"></i> Contraseña</label>
                     <input id="logPassword" type="password" class="form-control" placeholder="••••••••" required />
                   </div>
-                  <button class="btn btn-success w-100 py-3 fw-bold" type="submit">Iniciar sesión</button>
-                  <div class="mt-3 text-center">
-                    <a href="#" id="switchToRegister" class="text-decoration-none me-3">Crear cuenta</a>
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalReset" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
+                  <button class="btn btn-success w-100 mb-4" type="submit">
+                    <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
+                  </button>
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <a href="#" id="switchToRegister" class="text-decoration-none">
+                      Crear cuenta
+                    </a>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalReset" class="text-decoration-none">
+                      ¿Olvidaste tu contraseña?
+                    </a>
                   </div>
                   <div id="loginError" class="alert alert-danger mt-3 d-none"></div>
                 </form>
@@ -107,16 +655,17 @@
         </div>
       </div>
     </div>
+
   <main class="container animate-fade-in" id="mainApp" style="display:none;">
     <div class="section-title">
       <div class="row align-items-center">
         <div class="col-md-8">
-          <h2 class="mb-2"><i class="bi bi-basket3"></i> Inventario de Panes</h2>
-          <p class="text-muted mb-0">Administra tu catálogo de productos</p>
+          <h2 class="mb-2"><i class="bi bi-basket3-fill"></i> INVENTARIO DE PANES</h2>
+          <p class="text-muted mb-0">Administra tu catálogo de productos con elegancia</p>
         </div>
         <div class="col-md-4 text-end">
           <button id="btnAgregarPan" class="btn btn-success shadow" data-bs-toggle="modal" data-bs-target="#modalProducto">
-            <i class="bi bi-plus-circle"></i> Agregar Pan
+            <i class="bi bi-plus-circle-fill"></i> Agregar Pan
           </button>
         </div>
       </div>
@@ -140,8 +689,8 @@
     </div>
 
     <div class="section-title mt-5">
-      <h2 class="mb-2"><i class="bi bi-images"></i> Galería de Panes de Temporada</h2>
-      <p class="text-muted mb-0">Descubre nuestras especialidades</p>
+      <h2 class="mb-2"><i class="bi bi-images"></i> GALERÍA DE PANES DE TEMPORADA</h2>
+      <p class="text-muted mb-0">Descubre nuestras especialidades artesanales</p>
     </div>
     <div class="row g-4 animate-fade-in" id="galeria"></div>
   </main>
@@ -152,30 +701,30 @@
       <div class="modal-content">
         <form id="formProducto" enctype="multipart/form-data">
           <div class="modal-header">
-            <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square"></i> Agregar/Editar Pan</h5>
+            <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square"></i> AGREGAR / EDITAR PAN</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body p-4">
             <input type="hidden" id="id_producto" name="id_producto">
-            <div class="row g-3">
+            <div class="row g-4">
               <div class="col-md-6">
-                <label for="nombre" class="form-label fw-semibold">Nombre</label>
+                <label for="nombre" class="form-label fw-semibold"><i class="bi bi-tag"></i> Nombre</label>
                 <input type="text" class="form-control" id="nombre" name="nombre" required>
               </div>
               <div class="col-md-6">
-                <label for="precio" class="form-label fw-semibold">Precio ($)</label>
+                <label for="precio" class="form-label fw-semibold"><i class="bi bi-currency-dollar"></i> Precio ($)</label>
                 <input type="number" class="form-control" id="precio" name="precio" min="1" step="0.01" required>
               </div>
               <div class="col-md-6">
-                <label for="stock" class="form-label fw-semibold">Stock</label>
+                <label for="stock" class="form-label fw-semibold"><i class="bi bi-box-seam"></i> Stock</label>
                 <input type="number" class="form-control" id="stock" name="stock" min="0" required>
               </div>
               <div class="col-md-6">
-                <label for="imagen" class="form-label fw-semibold">Imagen</label>
+                <label for="imagen" class="form-label fw-semibold"><i class="bi bi-image"></i> Imagen</label>
                 <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*">
               </div>
               <div class="col-12">
-                <label for="descripcion" class="form-label fw-semibold">Descripción</label>
+                <label for="descripcion" class="form-label fw-semibold"><i class="bi bi-card-text"></i> Descripción</label>
                 <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
               </div>
             </div>
@@ -183,7 +732,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Guardar</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle-fill"></i> Guardar</button>
           </div>
         </form>
       </div>
@@ -195,17 +744,17 @@
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold"><i class="bi bi-cart-check"></i> Tu Carrito de Compras</h5>
+          <h5 class="modal-title fw-bold"><i class="bi bi-cart-check-fill"></i> TU CARRITO DE COMPRAS</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-4">
           <div id="carritoItems"></div>
-          <div class="text-end mt-4 p-3 bg-light rounded">
-            <h4 class="mb-0">Total: <span class="text-success">$<span id="carritoTotal">0.00</span></span></h4>
+          <div class="text-end mt-4 p-4 rounded" style="background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); border-left: 4px solid var(--elegant-gold);">
+            <h4 class="mb-0 fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">TOTAL: <span style="color: var(--elegant-gold);">$<span id="carritoTotal">0.00</span></span></h4>
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btnCheckout" class="btn btn-success"><i class="bi bi-credit-card"></i> Proceder al Pago</button>
+          <button id="btnCheckout" class="btn btn-success"><i class="bi bi-credit-card-fill"></i> Proceder al Pago</button>
           <button class="btn btn-secondary" data-bs-dismiss="modal">Seguir Comprando</button>
         </div>
       </div>
@@ -216,93 +765,93 @@
   <div class="modal fade" id="modalConocenos" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);">
-        <div class="modal-header border-0 pb-0 position-relative" style="background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%); min-height: 200px;">
-          <div class="position-absolute top-0 start-0 w-100 h-100" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 120%22><path d=%22M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z%22 fill=%22%23ffb74d%22 opacity=%220.3%22/></svg>'); background-size: cover; opacity: 0.5;"></div>
+        <div class="modal-header border-0 pb-0 position-relative" style="background: linear-gradient(135deg, #3e2723 0%, #5d4037 100%); min-height: 220px;">
+          <div class="position-absolute top-0 start-0 w-100 h-100" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 120%22><path d=%22M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z%22 fill=%22%23d4af37%22 opacity=%220.2%22/></svg>'); background-size: cover; opacity: 0.5;"></div>
           <div class="position-relative w-100">
-            <h2 class="modal-title text-white fw-bold mb-2 text-center" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 2.5rem;">🍞 Panadería La Desesperanza 🥐</h2>
-            <p class="text-white text-center mb-0" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">Horneando felicidad desde 2020</p>
+            <h2 class="modal-title fw-bold mb-2 text-center" style="color: var(--elegant-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 2.8rem; letter-spacing: 3px;">🍞 PANADERÍA LA DESESPERANZA 🥐</h2>
+            <p class="text-center mb-0" style="color: #e0d4c3; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); letter-spacing: 2px;">HORNEANDO FELICIDAD DESDE 2020</p>
           </div>
           <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
         </div>
         
         <div class="modal-body p-4">
-          <div class="card border-0 shadow-sm mb-4" style="background: white; border-left: 5px solid #ff9800 !important;">
+          <div class="card border-0 shadow-sm mb-4" style="background: white; border-left: 4px solid var(--elegant-gold) !important;">
             <div class="card-body p-4">
-              <div class="d-flex align-items-center mb-3">
-                <div class="bg-warning rounded-circle p-3 me-3" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
-                  <span style="font-size: 2rem;">📖</span>
+              <div class="d-flex align-items-center mb-4">
+                <div class="rounded-circle p-3 me-3" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--elegant-gold) 0%, var(--accent-copper) 100%);">
+                  <span style="font-size: 2.5rem;">📖</span>
                 </div>
-                <h4 class="mb-0 fw-bold text-dark">Nuestra Historia</h4>
+                <h4 class="mb-0 fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">NUESTRA HISTORIA</h4>
               </div>
-              <p class="text-muted mb-3" style="line-height: 1.8; font-size: 1.05rem;">
-                La Panadería <strong class="text-warning">La Desesperanza</strong> nació en un pequeño barrio en <strong>2020</strong>,
+              <p class="mb-3" style="line-height: 1.9; font-size: 1.05rem; color: var(--soft-gray); font-weight: 300;">
+                La Panadería <strong style="color: var(--elegant-gold);">La Desesperanza</strong> nació en un pequeño barrio en <strong>2020</strong>,
                 con el sueño de ofrecer panes artesanales llenos de tradición y un toque de innovación.
                 Desde entonces hemos sido el rincón favorito de quienes buscan el sabor casero
                 acompañado de un buen café. ☕
               </p>
-              <p class="text-muted mb-0" style="line-height: 1.8; font-size: 1.05rem;">
-                Cada pan está hecho con <span class="text-danger">❤️ dedicación</span>, como si fuera para nuestra propia familia.
+              <p class="mb-0" style="line-height: 1.9; font-size: 1.05rem; color: var(--soft-gray); font-weight: 300;">
+                Cada pan está hecho con <span style="color: var(--elegant-gold); font-weight: 600;">❤️ dedicación</span>, como si fuera para nuestra propia familia.
                 Nuestros ingredientes son seleccionados cuidadosamente y horneamos todo fresco cada día.
               </p>
             </div>
           </div>
 
-          <div class="row g-3 mb-4">
+          <div class="row g-4 mb-4">
             <div class="col-md-4">
-              <div class="card border-0 shadow-sm h-100 text-center p-3" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
+              <div class="card border-0 shadow-sm h-100 text-center p-4" style="background: white;">
                 <div class="card-body">
-                  <div class="mb-3" style="font-size: 3rem;">🥖</div>
-                  <h5 class="fw-bold text-dark">100% Artesanal</h5>
-                  <p class="text-muted small mb-0">Cada pan es amasado y horneado con amor y paciencia</p>
+                  <div class="mb-3" style="font-size: 3.5rem;">🥖</div>
+                  <h5 class="fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">100% ARTESANAL</h5>
+                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300; line-height: 1.6;">Cada pan es amasado y horneado con amor y paciencia</p>
                 </div>
               </div>
             </div>
             <div class="col-md-4">
-              <div class="card border-0 shadow-sm h-100 text-center p-3" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
+              <div class="card border-0 shadow-sm h-100 text-center p-4" style="background: white;">
                 <div class="card-body">
-                  <div class="mb-3" style="font-size: 3rem;">🌾</div>
-                  <h5 class="fw-bold text-dark">Ingredientes Frescos</h5>
-                  <p class="text-muted small mb-0">Usamos solo los mejores ingredientes naturales</p>
+                  <div class="mb-3" style="font-size: 3.5rem;">🌾</div>
+                  <h5 class="fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">INGREDIENTES FRESCOS</h5>
+                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300; line-height: 1.6;">Usamos solo los mejores ingredientes naturales</p>
                 </div>
               </div>
             </div>
             <div class="col-md-4">
-              <div class="card border-0 shadow-sm h-100 text-center p-3" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
+              <div class="card border-0 shadow-sm h-100 text-center p-4" style="background: white;">
                 <div class="card-body">
-                  <div class="mb-3" style="font-size: 3rem;">⏰</div>
-                  <h5 class="fw-bold text-dark">Recién Horneado</h5>
-                  <p class="text-muted small mb-0">Pan fresco todos los días desde las 6:00 AM</p>
+                  <div class="mb-3" style="font-size: 3.5rem;">⏰</div>
+                  <h5 class="fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">RECIÉN HORNEADO</h5>
+                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300; line-height: 1.6;">Pan fresco todos los días desde las 6:00 AM</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="card border-0 shadow-sm" style="background: white; border-left: 5px solid #ff9800 !important;">
+          <div class="card border-0 shadow-sm" style="background: white; border-left: 4px solid var(--elegant-gold) !important;">
             <div class="card-body p-4">
-              <div class="d-flex align-items-center mb-3">
-                <div class="bg-danger rounded-circle p-3 me-3" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
-                  <span style="font-size: 2rem;">📍</span>
+              <div class="d-flex align-items-center mb-4">
+                <div class="rounded-circle p-3 me-3" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);">
+                  <span style="font-size: 2.5rem;">📍</span>
                 </div>
                 <div>
-                  <h4 class="mb-0 fw-bold text-dark">Encuéntranos</h4>
-                  <p class="text-muted small mb-0">Ven a visitarnos, ¡te esperamos con pan caliente!</p>
+                  <h4 class="mb-0 fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">ENCUÉNTRANOS</h4>
+                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300;">Ven a visitarnos, ¡te esperamos con pan caliente!</p>
                 </div>
               </div>
-              <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm">
+              <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm mb-3" style="border: 3px solid var(--cream);">
                 <iframe 
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.642437058805!2d-99.1617437!3d19.4270202!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b2aa7c68f%3A0xdea9c33ec2d2a86f!2sPasteler%C3%ADa%20Ideal!5e0!3m2!1ses-419!2smx!4v1700000000000" 
                   width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
               </div>
-              <div class="mt-3 p-3 rounded" style="background: #fff3e0;">
-                <p class="mb-1"><strong>🕐 Horario:</strong> Lunes a Domingo, 6:00 AM - 8:00 PM</p>
-                <p class="mb-0"><strong>📞 Teléfono:</strong> (55) 1234-5678</p>
+              <div class="p-4 rounded" style="background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); border-left: 3px solid var(--elegant-gold);">
+                <p class="mb-2" style="color: var(--rich-brown); font-weight: 500;"><strong>🕐 HORARIO:</strong> <span style="font-weight: 300;">Lunes a Domingo, 6:00 AM - 8:00 PM</span></p>
+                <p class="mb-0" style="color: var(--rich-brown); font-weight: 500;"><strong>📞 TELÉFONO:</strong> <span style="font-weight: 300;">(55) 1234-5678</span></p>
               </div>
             </div>
           </div>
         </div>
         
-        <div class="modal-footer border-0 bg-white">
-          <button type="button" class="btn btn-warning px-4" data-bs-dismiss="modal">Cerrar</button>
+        <div class="modal-footer border-0" style="background: white;">
+          <button type="button" class="btn btn-warning px-5" data-bs-dismiss="modal">Cerrar</button>
         </div>
       </div>
     </div>
@@ -313,30 +862,47 @@
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold"><i class="bi bi-people"></i> Gestionar Usuarios</h5>
+          <h5 class="modal-title fw-bold"><i class="bi bi-people-fill"></i> GESTIONAR USUARIOS</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-4">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="usuariosTabla"></tbody>
-          </table>
-          <hr>
-          <h6 class="fw-bold mb-3">Agregar nuevo usuario</h6>
-          <form id="formNuevoUsuario" class="row g-2">
-            <div class="col-md-4"><input type="text" id="nuevoNombre" class="form-control" placeholder="Nombre" required></div>
-            <div class="col-md-4"><input type="email" id="nuevoEmail" class="form-control" placeholder="Email" required></div>
-            <div class="col-md-2"><select id="nuevoRol" class="form-select"><option value="cliente">Cliente</option><option value="admin">Admin</option></select></div>
-            <div class="col-md-2"><button class="btn btn-success w-100" type="submit"><i class="bi bi-plus"></i> Añadir</button></div>
-          </form>
+          <div class="table-responsive" style="padding: 20px; background: white; box-shadow: none;">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usuariosTabla"></tbody>
+            </table>
+          </div>
+          <hr class="my-4">
+          <div class="p-4 rounded" style="background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); border-left: 4px solid var(--elegant-gold);">
+            <h6 class="fw-bold mb-4" style="color: var(--rich-brown); letter-spacing: 1px;"><i class="bi bi-person-plus-fill"></i> AGREGAR NUEVO USUARIO</h6>
+            <form id="formNuevoUsuario" class="row g-3">
+              <div class="col-md-4">
+                <input type="text" id="nuevoNombre" class="form-control" placeholder="Nombre" required>
+              </div>
+              <div class="col-md-4">
+                <input type="email" id="nuevoEmail" class="form-control" placeholder="Email" required>
+              </div>
+              <div class="col-md-2">
+                <select id="nuevoRol" class="form-select">
+                  <option value="cliente">Cliente</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button class="btn btn-success w-100" type="submit">
+                  <i class="bi bi-plus-circle-fill"></i> Añadir
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -348,27 +914,29 @@
       <div class="modal-content">
         <form id="formResetPassword">
           <div class="modal-header">
-            <h5 class="modal-title fw-bold"><i class="bi bi-key"></i> Restablecer Contraseña</h5>
+            <h5 class="modal-title fw-bold"><i class="bi bi-key-fill"></i> RESTABLECER CONTRASEÑA</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body p-4">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Nombre</label>
+            <div class="mb-4">
+              <label class="form-label fw-semibold"><i class="bi bi-person"></i> Nombre</label>
               <input type="text" id="resetNombre" name="nombre" class="form-control" required>
             </div>
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Email</label>
+            <div class="mb-4">
+              <label class="form-label fw-semibold"><i class="bi bi-envelope"></i> Email</label>
               <input type="email" id="resetEmail" name="email" class="form-control" required>
             </div>
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Nueva Contraseña</label>
+            <div class="mb-4">
+              <label class="form-label fw-semibold"><i class="bi bi-lock"></i> Nueva Contraseña</label>
               <input type="password" id="resetPassword" name="newPassword" class="form-control" required>
             </div>
             <div id="resetError" class="alert alert-danger d-none"></div>
             <div id="resetSuccess" class="alert alert-success d-none"></div>
           </div>
           <div class="modal-footer">
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Cambiar Contraseña</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle-fill"></i> Cambiar Contraseña
+            </button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           </div>
         </form>
@@ -379,10 +947,11 @@
   <!-- Contenedor de notificaciones -->
   <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;"></div>
 
-  <footer class="text-white text-center py-4">
+  <footer class="text-white text-center py-5">
     <div class="container">
-      <p class="mb-2" style="color: black;"><i class="bi bi-shop"></i> Panadería La Desesperanza - Horneando tradición desde 2020</p>
-      <small style="color: black;">&copy; 2025 Todos los derechos reservados</small>
+      <p class="mb-2" style="font-size: 1.05rem;"><i class="bi bi-shop"></i> PANADERÍA LA DESESPERANZA</p>
+      <p class="mb-2" style="font-weight: 300;">Horneando tradición desde 2020</p>
+      <small style="font-weight: 300; letter-spacing: 1px;">&copy; 2025 Todos los derechos reservados</small>
     </div>
   </footer>
 
