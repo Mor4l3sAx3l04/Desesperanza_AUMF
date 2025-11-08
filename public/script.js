@@ -424,6 +424,13 @@ document.getElementById('btnCheckout').addEventListener('click', async () => {
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCarrito')).hide();
 });
 
+function validarPassword(password) {
+  // Expresión regular:
+  // Al menos una minúscula, una mayúscula, un número y un carácter especial, y mínimo 8 caracteres
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#._-])[A-Za-z\d@$!%*?&#._-]{8,}$/;
+  return regex.test(password);
+}
+
 // script.js
 document.addEventListener("DOMContentLoaded", () => {
   const formRegister = document.getElementById("formRegister");

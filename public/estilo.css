@@ -319,3 +319,25 @@ footer {
     max-width: calc(100% - 40px) !important;
   }
 }
+
+header {
+  position: relative;
+  z-index: 1000;
+}
+
+.dropdown-menu {
+  z-index: 2000 !important;
+}
+
+.modal {
+  z-index: 3000 !important;
+}
+
+.modal-backdrop {
+  z-index: 2990 !important;
+}
+
+/* El overlay solo domina cuando está activo */
+#authOverlay {
+  z-index: 4000;
+}
