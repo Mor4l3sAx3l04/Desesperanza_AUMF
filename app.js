@@ -1,7 +1,7 @@
 // app.js
-// 💻 Backend completo para tienda "Desesperanza"
 // Funcionalidades: login, registro, productos, categorías, carrito, ventas y usuarios (admin)
 // Base de datos: PostgreSQL (Render)
+//Socket.IO para mapa en tiempo real
 
 import 'dotenv/config';
 import express from "express";
@@ -10,23 +10,26 @@ import multer from "multer";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import pkg from "pg";
+import { createServer } from "http";  // NUEVO
+import { Server } from "socket.io";   // NUEVO
 
 const { Pool } = pkg;
 
-
-// --- Configuración de conexión PostgreSQL ---
+// Configuración de conexión PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-// --- Express ---
+// Express y Socket.IO
 const app = express();
+const server = createServer(app);  // NUEVO: Crear servidor HTTP
+const io = new Server(server);     // NUEVO: Inicializar Socket.IO
 const upload = multer();
 
-
 app.use(express.static("public"));
-// --- Sanitizador simple ---
+
+// Sanitizador simple
 function sanitizeInput(input) {
   if (!input) return "";
   return String(input)
@@ -34,7 +37,7 @@ function sanitizeInput(input) {
     .replace(/<\?php.*?\?>/gs, "");
 }
 
-// --- Middlewares ---
+// Middlewares
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
@@ -46,7 +49,7 @@ app.use(
   })
 );
 
-// --- Probar conexión ---
+// Probar conexión
 (async () => {
   try {
     const res = await pool.query("SELECT NOW()");
@@ -57,7 +60,7 @@ app.use(
   }
 })();
 
-// --- Función: verificar si el usuario es admin ---
+// Función: verificar si el usuario es admin
 function requireAdmin(req, res, next) {
   if (!req.session.user || req.session.user.rol !== "admin") {
     return res.status(403).json({ error: "Acceso denegado." });
@@ -65,7 +68,29 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// --- RUTAS DE AUTENTICACIÓN ---
+// SOCKET.IO - MAPA EN TIEMPO REAL
+
+io.on('connection', (socket) => {
+  console.log('👤 Usuario conectado al mapa:', socket.id);
+  
+  // Recibir coordenadas del usuario
+  socket.on('userCoordinates', (coords) => {
+    console.log('📍 Coordenadas recibidas:', coords);
+    // Enviar a todos los demás usuarios conectados
+    socket.broadcast.emit('userNewCoordinates', {
+      coords: coords,
+      socketId: socket.id
+    });
+  });
+  
+  // Cuando un usuario se desconecta
+  socket.on('disconnect', () => {
+    console.log('👋 Usuario desconectado:', socket.id);
+    socket.broadcast.emit('userDisconnected', socket.id);
+  });
+});
+
+// RUTAS DE AUTENTICACIÓN
 
 // Registro
 app.post("/register", async (req, res) => {
@@ -172,9 +197,9 @@ app.post("/resetPassword", async (req, res) => {
   }
 });
 
-// --- RUTAS DE PRODUCTOS ---
+// RUTAS DE PRODUCTOS
 
-// Obtener productos (compatible con frontend)
+// Obtener productos
 app.get("/productos", async (req, res) => {
   try {
     const result = await pool.query(
@@ -285,7 +310,7 @@ app.post("/borrarProducto", requireAdmin, async (req, res) => {
   }
 });
 
-// --- RUTAS DE CATEGORÍAS ---
+// RUTAS DE CATEGORÍAS
 
 // Crear categoría
 app.post("/categoria", requireAdmin, async (req, res) => {
@@ -313,7 +338,7 @@ app.get("/categorias", async (req, res) => {
   }
 });
 
-// --- RUTAS DE CARRITO ---
+// RUTAS DE CARRITO
 
 // Agregar al carrito
 app.post("/carrito/agregar", async (req, res) => {
@@ -322,11 +347,39 @@ app.post("/carrito/agregar", async (req, res) => {
       return res.status(401).json({ error: "Inicia sesión para agregar al carrito." });
 
     const { id_producto, cantidad } = req.body;
+    
+    // Validar que la cantidad sea positiva
+    if (cantidad <= 0) {
+      return res.status(400).json({ error: "La cantidad debe ser mayor a 0." });
+    }
 
+    // Obtener el stock actual del producto
+    const producto = await pool.query(
+      "SELECT stock FROM producto WHERE id_producto = $1",
+      [id_producto]
+    );
+
+    if (producto.rows.length === 0) {
+      return res.status(404).json({ error: "Producto no encontrado." });
+    }
+
+    const stockDisponible = producto.rows[0].stock;
+
+    // Verificar si ya existe en el carrito
     const existe = await pool.query(
-      "SELECT id_carrito FROM carrito WHERE id_usuario=$1 AND id_producto=$2",
+      "SELECT cantidad FROM carrito WHERE id_usuario=$1 AND id_producto=$2",
       [req.session.user.id_usuario, id_producto]
     );
+
+    const cantidadEnCarrito = existe.rows.length > 0 ? existe.rows[0].cantidad : 0;
+    const nuevaCantidadTotal = cantidadEnCarrito + cantidad;
+
+    // Validar que no exceda el stock
+    if (nuevaCantidadTotal > stockDisponible) {
+      return res.status(400).json({ 
+        error: `Stock insuficiente. Disponible: ${stockDisponible}, en carrito: ${cantidadEnCarrito}` 
+      });
+    }
 
     if (existe.rows.length > 0) {
       await pool.query(
@@ -355,9 +408,9 @@ app.get("/carrito", async (req, res) => {
 
     const result = await pool.query(
       `SELECT c.id_carrito, p.id_producto, p.nombre, p.precio, c.cantidad
-       FROM carrito c
-       JOIN producto p ON c.id_producto = p.id_producto
-       WHERE c.id_usuario = $1`,
+      FROM carrito c
+      JOIN producto p ON c.id_producto = p.id_producto
+      WHERE c.id_usuario = $1`,
       [req.session.user.id_usuario]
     );
     res.json({ items: result.rows });
@@ -374,6 +427,32 @@ app.post("/carrito/actualizar", async (req, res) => {
       return res.status(401).json({ error: "Inicia sesión." });
 
     const { id_carrito, cantidad } = req.body;
+    
+    if (cantidad <= 0) {
+      return res.status(400).json({ error: "La cantidad debe ser mayor a 0." });
+    }
+    
+    // Obtener el producto del carrito
+    const itemCarrito = await pool.query(
+      "SELECT id_producto FROM carrito WHERE id_carrito = $1 AND id_usuario = $2",
+      [id_carrito, req.session.user.id_usuario]
+    );
+    
+    if (itemCarrito.rows.length === 0) {
+      return res.status(404).json({ error: "Item no encontrado en el carrito." });
+    }
+    
+    // Verificar stock disponible
+    const producto = await pool.query(
+      "SELECT stock FROM producto WHERE id_producto = $1",
+      [itemCarrito.rows[0].id_producto]
+    );
+    
+    if (cantidad > producto.rows[0].stock) {
+      return res.status(400).json({ 
+        error: `Stock insuficiente. Disponible: ${producto.rows[0].stock}` 
+      });
+    }
     
     await pool.query(
       "UPDATE carrito SET cantidad = $1 WHERE id_carrito = $2 AND id_usuario = $3",
@@ -409,43 +488,69 @@ app.post("/carrito/eliminar", async (req, res) => {
 
 // Checkout
 app.post("/carrito/checkout", async (req, res) => {
+  const client = await pool.connect();
+  
   try {
     if (!req.session.user)
       return res.status(401).json({ error: "Inicia sesión para comprar." });
 
     const { id_usuario } = req.session.user;
     
-    // Crear venta
-    const venta = await pool.query(
+    await client.query('BEGIN');
+    
+    // Obtener items del carrito
+    const items = await client.query(
+      "SELECT c.id_producto, c.cantidad, p.stock, p.nombre FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = $1",
+      [id_usuario]
+    );
+    
+    if (items.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: "El carrito está vacío." });
+    }
+    
+    // Validar stock para cada producto
+    for (const item of items.rows) {
+      if (item.cantidad > item.stock) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          error: `Stock insuficiente para "${item.nombre}". Disponible: ${item.stock}, solicitado: ${item.cantidad}` 
+        });
+      }
+    }
+    
+    // Crear la venta
+    const venta = await client.query(
       "INSERT INTO venta (id_usuario) VALUES ($1) RETURNING id_venta",
       [id_usuario]
     );
 
-    // Obtener items del carrito
-    const items = await pool.query(
-      "SELECT id_producto, cantidad FROM carrito WHERE id_usuario = $1",
-      [id_usuario]
-    );
-
-    // Reducir stock
+    // Actualizar stock y limpiar carrito
     for (const item of items.rows) {
-      await pool.query(
+      await client.query(
         "UPDATE producto SET stock = stock - $1 WHERE id_producto = $2",
         [item.cantidad, item.id_producto]
       );
     }
 
-    // Limpiar carrito
-    await pool.query("DELETE FROM carrito WHERE id_usuario = $1", [id_usuario]);
+    await client.query("DELETE FROM carrito WHERE id_usuario = $1", [id_usuario]);
+    
+    await client.query('COMMIT');
 
-    res.json({ mensaje: "Compra realizada con éxito.", id_venta: venta.rows[0].id_venta });
+    res.json({ 
+      mensaje: "Compra realizada con éxito.", 
+      id_venta: venta.rows[0].id_venta 
+    });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("Error al procesar venta:", err);
     res.status(500).json({ error: "Error al procesar venta." });
+  } finally {
+    client.release();
   }
 });
 
-// --- RUTAS DE USUARIOS (ADMIN) ---
+// RUTAS DE USUARIOS
 
 // Obtener usuarios
 app.get("/usuarios", requireAdmin, async (req, res) => {
@@ -466,7 +571,7 @@ app.post("/usuarios/agregar", requireAdmin, async (req, res) => {
     email = sanitizeInput(email);
     rol = rol === "admin" ? "admin" : "cliente";
 
-    const password = "password123"; // Contraseña por defecto
+    const password = "password123";
     const hashed = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
@@ -493,7 +598,9 @@ app.post("/usuarios/eliminar", requireAdmin, async (req, res) => {
   }
 });
 
-// --- RUTAS DE VENTAS ---
+// ============================================
+// RUTAS DE VENTAS
+// ============================================
 
 // Registrar venta
 app.post("/venta", async (req, res) => {
@@ -528,6 +635,10 @@ app.post("/venta", async (req, res) => {
   }
 });
 
-// --- Servidor ---
+// INICIAR SERVIDOR
+
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Servidor escuchando en el puerto ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
+  console.log(`🗺️  Socket.IO para mapa en tiempo real activado`);
+});

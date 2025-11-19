@@ -344,15 +344,41 @@ function cargarGaleria() {
 }
 
 // ---------- Carrito (frontend) ----------
+
 async function agregarAlCarrito(id_producto) {
   if (!currentUser) return showToast('Debes iniciar sesión para agregar al carrito.', "warning");
+  
+  // Obtener el stock disponible del producto
+  const productoResp = await fetch('/productos').then(r => r.json());
+  const producto = productoResp.find(p => p.id_producto == id_producto);
+  
+  if (!producto) {
+    return showToast('Producto no encontrado.', "error");
+  }
+  
+  if (producto.stock <= 0) {
+    return showToast('Este producto está agotado.', "warning");
+  }
+  
+  // Verificar cuánto ya tiene en el carrito
+  const carritoResp = await fetch('/carrito').then(r => r.json());
+  const itemEnCarrito = (carritoResp.items || []).find(it => it.id_producto == id_producto);
+  const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
+  
+  // Validar que no exceda el stock
+  if (cantidadEnCarrito >= producto.stock) {
+    return showToast(`No puedes agregar más. Stock disponible: ${producto.stock}`, "warning");
+  }
+  
   const cantidad = 1;
   const resp = await fetch('/carrito/agregar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_producto: Number(id_producto), cantidad })  // 👈 CONVERTIR A NÚMERO
+    body: JSON.stringify({ id_producto: Number(id_producto), cantidad })
   }).then(r => r.json());
+  
   if (resp.error) return showToast(resp.error, "error");
+  
   showToast('Agregado al carrito.', "success");
   actualizarBadge();
 }
@@ -361,41 +387,83 @@ async function cargarCarrito() {
   const resp = await fetch('/carrito').then(r => r.json());
   const items = resp.items || [];
   const container = document.getElementById('carritoItems');
+  
   if (items.length === 0) {
     container.innerHTML = '<p>Tu carrito está vacío.</p>';
     document.getElementById('carritoTotal').textContent = '0.00';
     return;
   }
-  container.innerHTML = items.map(it => `
-    <div class="d-flex align-items-center justify-content-between border-bottom py-2">
-      <div>
-        <strong>${escapeHtml(it.nombre)}</strong><br>
-        Precio unitario: $${Number(it.precio).toFixed(2)}
+  
+  // Obtener stocks actuales
+  const productosResp = await fetch('/productos').then(r => r.json());
+  
+  container.innerHTML = items.map(it => {
+    const producto = productosResp.find(p => p.id_producto == it.id_producto);
+    const stockDisponible = producto ? producto.stock : 0;
+    const maxCantidad = stockDisponible;
+    
+    return `
+      <div class="d-flex align-items-center justify-content-between border-bottom py-2">
+        <div>
+          <strong>${escapeHtml(it.nombre)}</strong><br>
+          Precio unitario: $${Number(it.precio).toFixed(2)}<br>
+          <small class="text-muted">Stock disponible: ${stockDisponible}</small>
+          ${it.cantidad > stockDisponible ? '<br><span class="badge bg-danger">¡Cantidad excede stock!</span>' : ''}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <input data-id="${it.id_carrito}" 
+                data-producto-id="${it.id_producto}"
+                class="form-control form-control-sm qty-input" 
+                type="number" 
+                min="1" 
+                max="${maxCantidad}"
+                style="width:80px;" 
+                value="${Math.min(it.cantidad, maxCantidad)}">
+          <button class="btn btn-sm btn-danger btn-eliminar" data-id="${it.id_carrito}">Eliminar</button>
+        </div>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <input data-id="${it.id_carrito}" class="form-control form-control-sm qty-input" type="number" min="1" style="width:80px;" value="${it.cantidad}">
-        <button class="btn btn-sm btn-danger btn-eliminar" data-id="${it.id_carrito}">Eliminar</button>
-      </div>
-    </div>
-  `).join('');
-  // asignar eventos
+    `;
+  }).join('');
+  
+  // Asignar eventos con validación de stock
   document.querySelectorAll('.qty-input').forEach(input => {
     input.addEventListener('change', async function() {
       const id = this.dataset.id;
-      const cantidad = Number(this.value);
-      if (cantidad <= 0) { this.value = 1; return; }
+      const productoId = this.dataset.productoId;
+      let cantidad = Number(this.value);
+      const max = Number(this.max);
+      
+      if (cantidad <= 0) { 
+        this.value = 1; 
+        cantidad = 1;
+      }
+      
+      if (cantidad > max) {
+        this.value = max;
+        cantidad = max;
+        showToast(`Stock disponible: ${max} unidades`, "warning");
+      }
+      
       const r = await fetch('/carrito/actualizar', {
-        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_carrito: id, cantidad })
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({ id_carrito: id, cantidad })
       }).then(r => r.json());
+      
       if (r.error) showToast(r.error, "error");
       cargarCarrito();
       actualizarBadge();
     });
   });
+  
   document.querySelectorAll('.btn-eliminar').forEach(btn => {
     btn.addEventListener('click', async function() {
       const id = this.dataset.id;
-      await fetch('/carrito/eliminar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id_carrito: id }) }).then(r => r.json());
+      await fetch('/carrito/eliminar', { 
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({ id_carrito: id }) 
+      }).then(r => r.json());
       cargarCarrito();
       actualizarBadge();
     });
@@ -415,8 +483,36 @@ async function actualizarBadge() {
 
 // checkout
 document.getElementById('btnCheckout').addEventListener('click', async () => {
+  // Obtener items del carrito
+  const carritoResp = await fetch('/carrito').then(r => r.json());
+  const items = carritoResp.items || [];
+  
+  if (items.length === 0) {
+    return showToast('Tu carrito está vacío.', "warning");
+  }
+  
+  // Validar stock antes de procesar
+  const productosResp = await fetch('/productos').then(r => r.json());
+  let hayError = false;
+  
+  for (const item of items) {
+    const producto = productosResp.find(p => p.id_producto == item.id_producto);
+    if (!producto || producto.stock < item.cantidad) {
+      hayError = true;
+      showToast(`No hay suficiente stock de "${item.nombre}". Disponible: ${producto ? producto.stock : 0}`, "error");
+    }
+  }
+  
+  if (hayError) {
+    showToast('Por favor ajusta las cantidades en tu carrito.', "warning");
+    cargarCarrito(); // Recargar para actualizar stocks
+    return;
+  }
+  
+  // Procesar compra
   const r = await fetch('/carrito/checkout', { method: 'POST' }).then(r => r.json());
   if (r.error) return showToast(r.error, "error");
+  
   showToast(r.mensaje || "Compra exitosa", "success");
   cargarProductos();
   cargarCarrito();

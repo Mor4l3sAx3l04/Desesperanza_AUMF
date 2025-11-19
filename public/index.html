@@ -11,14 +11,60 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="estilo.css">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Estilos para el mapa */
+    #map-template {
+      height: 450px;
+      width: 100%;
+      border-radius: 10px;
+      border: 3px solid #d4af37;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      z-index: 1;
+    }
+    
+    .leaflet-popup-content-wrapper {
+      background: linear-gradient(135deg, #3e2723 0%, #5d4037 100%);
+      color: #d4af37;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    
+    .leaflet-popup-tip {
+      background: #3e2723;
+    }
+  </style>
 </head>
 <body>
+    <!-- Luces navideñas en la parte superior -->
+  <div class="christmas-lights"></div>
+  <!-- Efecto de nieve cayendo -->
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
+  <div class="snowflake">❆</div>
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
+  <div class="snowflake">❆</div>
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
+  <div class="snowflake">❆</div>
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
+  <div class="snowflake">❆</div>
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
+  <div class="snowflake">❆</div>
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
+  <div class="snowflake">❆</div>
+  <div class="snowflake">❄</div>
+  <div class="snowflake">❅</div>
   <header class="text-center py-4 mb-5 position-relative">
     <div class="container">
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="text-start">
-          <h1 class="display-5 fw-bold mb-1">🍞 PANADERÍA LA DESESPERANZA</h1>
-          <small class="lead">Panes de Temporada · Día de Muertos & Halloween</small>
+          <h1 class="display-5 fw-bold mb-1">🎄 PANADERÍA LA DESESPERANZA 🎅</h1>
+          <small class="lead">Panes Navideños · Especial Diciembre 2025 ❄️</small>
         </div>
         <div class="d-flex align-items-center gap-3">
           <button id="btnConocenos" class="btn btn-header btn-sm shadow-sm" title="Conócenos">
@@ -28,13 +74,18 @@
             <i class="bi bi-cart3"></i> Carrito
             <span id="badgeCarrito" class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display:none;">0</span>
           </button>
-          <div class="dropdown">
-            <button id="btnPerfil" class="btn btn-header btn-sm dropdown-toggle shadow-sm"
-                    data-bs-toggle="dropdown" data-bs-display="static">
+          <div class="dropend">
+            <button id="btnPerfil" 
+                    class="btn btn-header btn-sm dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown">
               <i class="bi bi-person-circle"></i> Perfil
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow" id="perfilDropdown">
-              <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a></li>
+            <ul class="dropdown-menu dropdown-menu-end shadow" 
+                id="perfilDropdown">
+              <li><a class="dropdown-item" href="#" id="logoutBtn">
+                <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+              </a></li>
             </ul>
           </div>
         </div>
@@ -229,98 +280,90 @@
     </div>
   </div>
 
-  <!-- Modal Conócenos -->
+  <!-- Modal Conócenos CON MAPA -->
   <div class="modal fade" id="modalConocenos" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow-lg" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);">
+        
+        <!-- Header del modal -->
         <div class="modal-header border-0 pb-0 position-relative" style="background: linear-gradient(135deg, #3e2723 0%, #5d4037 100%); min-height: 220px;">
           <div class="position-absolute top-0 start-0 w-100 h-100" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 120%22><path d=%22M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z%22 fill=%22%23d4af37%22 opacity=%220.2%22/></svg>'); background-size: cover; opacity: 0.5;"></div>
           <div class="position-relative w-100">
-            <h2 class="modal-title fw-bold mb-2 text-center" style="color: var(--elegant-gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 2.8rem; letter-spacing: 3px;">🍞 PANADERÍA LA DESESPERANZA 🥐</h2>
-            <p class="text-center mb-0" style="color: #e0d4c3; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); letter-spacing: 2px;">HORNEANDO FELICIDAD DESDE 2020</p>
+            <h2 class="modal-title fw-bold mb-2 text-center" style="color: #d4af37; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 2.8rem; letter-spacing: 3px;">
+              🍞 PANADERÍA LA DESESPERANZA 🥐
+            </h2>
+            <p class="text-center mb-0" style="color: #e0d4c3; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); letter-spacing: 2px;">
+              HORNEANDO FELICIDAD DESDE 2020
+            </p>
           </div>
           <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
         </div>
         
+        <!-- Body del modal -->
         <div class="modal-body p-4">
-          <div class="card border-0 shadow-sm mb-4" style="background: white; border-left: 4px solid var(--elegant-gold) !important;">
+          
+          <!-- Sección de historia (opcional) -->
+          <div class="card border-0 shadow-sm mb-4" style="background: white; border-left: 4px solid #d4af37 !important;">
             <div class="card-body p-4">
               <div class="d-flex align-items-center mb-4">
-                <div class="rounded-circle p-3 me-3" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--elegant-gold) 0%, var(--accent-copper) 100%);">
+                <div class="rounded-circle p-3 me-3" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);">
                   <span style="font-size: 2.5rem;">📖</span>
                 </div>
-                <h4 class="mb-0 fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">NUESTRA HISTORIA</h4>
+                <h4 class="mb-0 fw-bold" style="color: #3e2723; letter-spacing: 1px;">NUESTRA HISTORIA</h4>
               </div>
-              <p class="mb-3" style="line-height: 1.9; font-size: 1.05rem; color: var(--soft-gray); font-weight: 300;">
-                La Panadería <strong style="color: var(--elegant-gold);">La Desesperanza</strong> nació en un pequeño barrio en <strong>2020</strong>,
+              <p class="mb-0" style="line-height: 1.9; font-size: 1.05rem; color: #6d6d6d; font-weight: 300;">
+                La Panadería <strong style="color: #d4af37;">La Desesperanza</strong> nació en <strong>2020</strong>,
                 con el sueño de ofrecer panes artesanales llenos de tradición y un toque de innovación.
-                Desde entonces hemos sido el rincón favorito de quienes buscan el sabor casero
-                acompañado de un buen café. ☕
-              </p>
-              <p class="mb-0" style="line-height: 1.9; font-size: 1.05rem; color: var(--soft-gray); font-weight: 300;">
-                Cada pan está hecho con <span style="color: var(--elegant-gold); font-weight: 600;">❤️ dedicación</span>, como si fuera para nuestra propia familia.
-                Nuestros ingredientes son seleccionados cuidadosamente y horneamos todo fresco cada día.
               </p>
             </div>
           </div>
 
-          <div class="row g-4 mb-4">
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm h-100 text-center p-4" style="background: white;">
-                <div class="card-body">
-                  <div class="mb-3" style="font-size: 3.5rem;">🥖</div>
-                  <h5 class="fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">100% ARTESANAL</h5>
-                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300; line-height: 1.6;">Cada pan es amasado y horneado con amor y paciencia</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm h-100 text-center p-4" style="background: white;">
-                <div class="card-body">
-                  <div class="mb-3" style="font-size: 3.5rem;">🌾</div>
-                  <h5 class="fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">INGREDIENTES FRESCOS</h5>
-                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300; line-height: 1.6;">Usamos solo los mejores ingredientes naturales</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm h-100 text-center p-4" style="background: white;">
-                <div class="card-body">
-                  <div class="mb-3" style="font-size: 3.5rem;">⏰</div>
-                  <h5 class="fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">RECIÉN HORNEADO</h5>
-                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300; line-height: 1.6;">Pan fresco todos los días desde las 6:00 AM</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card border-0 shadow-sm" style="background: white; border-left: 4px solid var(--elegant-gold) !important;">
+          <!-- SECCIÓN DEL MAPA - IMPORTANTE -->
+          <div class="card border-0 shadow-sm" style="background: white; border-left: 4px solid #d4af37 !important;">
             <div class="card-body p-4">
+              
+              <!-- Título -->
               <div class="d-flex align-items-center mb-4">
                 <div class="rounded-circle p-3 me-3" style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);">
                   <span style="font-size: 2.5rem;">📍</span>
                 </div>
                 <div>
-                  <h4 class="mb-0 fw-bold" style="color: var(--rich-brown); letter-spacing: 1px;">ENCUÉNTRANOS</h4>
-                  <p class="small mb-0" style="color: var(--soft-gray); font-weight: 300;">Ven a visitarnos, ¡te esperamos con pan caliente!</p>
+                  <h4 class="mb-0 fw-bold" style="color: #3e2723; letter-spacing: 1px;">
+                    ENCUÉNTRANOS - MAPA EN TIEMPO REAL
+                  </h4>
+                  <p class="small mb-0" style="color: #6d6d6d; font-weight: 300;">
+                    ¡Mira dónde están nuestros clientes conectados! 🗺️
+                  </p>
                 </div>
               </div>
-              <div class="ratio ratio-16x9 rounded overflow-hidden shadow-sm mb-3" style="border: 3px solid var(--cream);">
-                <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.642437058805!2d-99.1617437!3d19.4270202!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b2aa7c68f%3A0xdea9c33ec2d2a86f!2sPasteler%C3%ADa%20Ideal!5e0!3m2!1ses-419!2smx!4v1700000000000" 
-                  width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+              
+              <!-- CONTENEDOR DEL MAPA - ESTE ES EL DIV IMPORTANTE -->
+              <div id="map-template" class="mb-3"></div>
+              
+              <!-- Información de contacto -->
+              <div class="p-4 rounded" style="background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); border-left: 3px solid #d4af37;">
+                <p class="mb-2" style="color: #3e2723; font-weight: 500;">
+                  <strong>🕐 HORARIO:</strong> 
+                  <span style="font-weight: 300;">Lunes a Domingo, 6:00 AM - 8:00 PM</span>
+                </p>
+                <p class="mb-0" style="color: #3e2723; font-weight: 500;">
+                  <strong>📞 TELÉFONO:</strong> 
+                  <span style="font-weight: 300;">(55) 1234-5678</span>
+                </p>
               </div>
-              <div class="p-4 rounded" style="background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); border-left: 3px solid var(--elegant-gold);">
-                <p class="mb-2" style="color: var(--rich-brown); font-weight: 500;"><strong>🕐 HORARIO:</strong> <span style="font-weight: 300;">Lunes a Domingo, 6:00 AM - 8:00 PM</span></p>
-                <p class="mb-0" style="color: var(--rich-brown); font-weight: 500;"><strong>📞 TELÉFONO:</strong> <span style="font-weight: 300;">(55) 1234-5678</span></p>
-              </div>
+              
             </div>
           </div>
+          
         </div>
         
+        <!-- Footer del modal -->
         <div class="modal-footer border-0" style="background: white;">
-          <button type="button" class="btn btn-warning px-5" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-warning px-5" data-bs-dismiss="modal">
+            Cerrar
+          </button>
         </div>
+        
       </div>
     </div>
   </div>
@@ -423,7 +466,18 @@
     </div>
   </footer>
 
+  <!-- Leaflet CSS (en el <head>) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Socket.IO (automáticamente servido por tu servidor) -->
+  <script src="/socket.io/socket.io.js"></script>
+  
+  <!-- Tu script principal -->
   <script src="script.js"></script>
+
+  <script src="mapa.js"></script>
 </body>
 </html>
