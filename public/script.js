@@ -323,10 +323,10 @@ function borrarProducto(id) {
 function cargarGaleria() {
   // Mantengo tu galería por defecto (puedes hacer endpoint para editar)
   const panes = [
-    { nombre: 'Pan de Muerto', descripcion: 'Tradicional pan mexicano decorado con "huesitos" de masa y azúcar.', precio: 25, img: 'https://www.aceitesdeolivadeespana.com/wp-content/uploads/2016/06/pan_de_muerto.jpg' },
-    { nombre: 'Calaverita de Azúcar', descripcion: 'Dulce típico de Día de Muertos hecho de azúcar y decorado a mano.', precio: 15, img: 'https://laroussecocina.mx/wp-content/uploads/2018/01/Calavera-de-azucar-001-Larousse-Cocina.jpg.webp' },
-    { nombre: 'Pan de Calabaza', descripcion: 'Pan suave y esponjoso hecho con puré de calabaza y especias.', precio: 30, img: 'https://www.cuerpomente.com/medio/2023/10/16/pan-calabaza_a1d50000_231016124817_1280x720.jpg' },
-    { nombre: 'Pan Fantasma', descripcion: 'Pan decorado con forma de fantasma, ideal para Halloween.', precio: 18, img: 'https://www.amr.org.mx/paneles/images/1/1-2-20231007191426-1.jpg' }
+    { nombre: 'Pan de Muerto', descripcion: 'Tradicional pan mexicano decorado con "huesitos" de masa y azúcar.', precio: 25, img: 'https://images.pexels.com/photos/19132888/pexels-photo-19132888.jpeg' },
+    { nombre: 'Calaverita de Azúcar', descripcion: 'Dulce típico de Día de Muertos hecho de azúcar y decorado a mano.', precio: 15, img: 'https://images.pexels.com/photos/5702776/pexels-photo-5702776.jpeg' },
+    { nombre: 'Pan de Calabaza', descripcion: 'Pan suave y esponjoso hecho con puré de calabaza y especias.', precio: 30, img: 'https://images.pexels.com/photos/6211080/pexels-photo-6211080.jpeg' },
+    { nombre: 'Pan Fantasma', descripcion: 'Pan decorado con forma de fantasma, ideal para Halloween.', precio: 18, img: 'https://images.pexels.com/photos/1304543/pexels-photo-1304543.jpeg' }
   ];
   const galeria = document.getElementById('galeria');
   galeria.innerHTML = panes.map(pan => `
