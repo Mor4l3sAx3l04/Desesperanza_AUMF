@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Panadería La Desesperanza - Inventario de Panes</title>
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="desesperanza.ico" type="image/x-icon">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,7 +36,7 @@
   </style>
 </head>
 <body>
-    <!-- Luces navideñas en la parte superior -->
+  <!-- Luces navideñas en la parte superior -->
   <div class="christmas-lights"></div>
   <!-- Efecto de nieve cayendo -->
   <div class="snowflake">❄</div>
@@ -63,8 +63,8 @@
     <div class="container">
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="text-start">
-          <h1 class="display-5 fw-bold mb-1">🎄 PANADERÍA LA DESESPERANZA 🎅</h1>
-          <small class="lead">Panes Navideños · Especial Diciembre 2025 ❄️</small>
+          <h1 class="display-5 fw-bold mb-1">PANADERÍA LA DESESPERANZA</h1>
+          <small class="lead">Panes Navideños · Especial Diciembre 2025</small>
         </div>
         <div class="d-flex align-items-center gap-3">
           <button id="btnConocenos" class="btn btn-header btn-sm shadow-sm" title="Conócenos">
@@ -290,7 +290,7 @@
           <div class="position-absolute top-0 start-0 w-100 h-100" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1200 120%22><path d=%22M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z%22 fill=%22%23d4af37%22 opacity=%220.2%22/></svg>'); background-size: cover; opacity: 0.5;"></div>
           <div class="position-relative w-100">
             <h2 class="modal-title fw-bold mb-2 text-center" style="color: #d4af37; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 2.8rem; letter-spacing: 3px;">
-              🍞 PANADERÍA LA DESESPERANZA 🥐
+              PANADERÍA LA DESESPERANZA
             </h2>
             <p class="text-center mb-0" style="color: #e0d4c3; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); letter-spacing: 2px;">
               HORNEANDO FELICIDAD DESDE 2020
@@ -343,11 +343,11 @@
               <!-- Información de contacto -->
               <div class="p-4 rounded" style="background: linear-gradient(135deg, #faf8f3 0%, #f5f1e8 100%); border-left: 3px solid #d4af37;">
                 <p class="mb-2" style="color: #3e2723; font-weight: 500;">
-                  <strong>🕐 HORARIO:</strong> 
+                  <strong>HORARIO:</strong> 
                   <span style="font-weight: 300;">Lunes a Domingo, 6:00 AM - 8:00 PM</span>
                 </p>
                 <p class="mb-0" style="color: #3e2723; font-weight: 500;">
-                  <strong>📞 TELÉFONO:</strong> 
+                  <strong>TELÉFONO:</strong> 
                   <span style="font-weight: 300;">(55) 1234-5678</span>
                 </p>
               </div>
@@ -455,6 +455,177 @@
     </div>
   </div>
 
+  <!-- AGREGAR ESTE MODAL AL FINAL DE TU HTML, ANTES DEL </body> -->
+
+  <!-- Modal Ticket de Compra -->
+  <div class="modal fade" id="modalTicket" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); border: 3px solid #d4af37;">
+        <div class="modal-header border-0 pb-0">
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4" id="ticketContent">
+          
+          <!-- Contenido del Ticket -->
+          <div class="text-center mb-4">
+            <img src="desesperanza.png" alt="Logo" style="max-width: 120px; height: auto; margin-bottom: 15px;">
+            <h3 class="fw-bold mb-1" style="color: #3e2723; letter-spacing: 2px;">PANADERÍA LA DESESPERANZA</h3>
+            <p class="mb-0" style="color: #5d4037; font-size: 0.9rem;">Panes Navideños · Especial Diciembre 2025</p>
+            <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent, #d4af37, transparent); margin: 15px 0;"></div>
+          </div>
+
+          <!-- Datos de la Venta -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="fw-semibold" style="color: #3e2723;">No. Venta:</span>
+              <span id="ticketNumVenta" class="fw-bold" style="color: #d4af37;">#0000</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="fw-semibold" style="color: #3e2723;">Fecha:</span>
+              <span id="ticketFecha">--/--/----</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="fw-semibold" style="color: #3e2723;">Cliente:</span>
+              <span id="ticketCliente">Usuario</span>
+            </div>
+          </div>
+
+          <div style="width: 100%; height: 1px; background: #d4af37; margin: 20px 0;"></div>
+
+          <!-- Productos Comprados -->
+          <div class="mb-4">
+            <h5 class="fw-bold mb-3" style="color: #3e2723; text-align: center;">PRODUCTOS COMPRADOS</h5>
+            <div id="ticketProductos">
+              <!-- Se llenará dinámicamente -->
+            </div>
+          </div>
+
+          <div style="width: 100%; height: 2px; background: linear-gradient(to right, transparent, #d4af37, transparent); margin: 20px 0;"></div>
+
+          <!-- Total -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2" style="font-size: 1.3rem;">
+              <span class="fw-bold" style="color: #3e2723;">TOTAL PAGADO:</span>
+              <span id="ticketTotal" class="fw-bold" style="color: #d4af37;">$0.00</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="fw-semibold" style="color: #5d4037;">Fondos Restantes:</span>
+              <span id="ticketFondosRestantes" class="fw-semibold" style="color: #2e7d32;">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Mensaje de agradecimiento -->
+          <div class="text-center p-3 rounded" style="background: rgba(212, 175, 55, 0.1); border: 1px dashed #d4af37;">
+            <p class="mb-0 fw-semibold" style="color: #3e2723;">
+              ¡Gracias por tu compra!<br>
+              <small style="color: #5d4037;">Te esperamos pronto con más panes deliciosos</small>
+            </p>
+          </div>
+
+        </div>
+        
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Cerrar
+          </button>
+          <button type="button" class="btn btn-success" id="btnDescargarTicket">
+            <i class="bi bi-download"></i> Descargar Ticket
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Historial de Compras -->
+  <div class="modal fade" id="modalHistorial" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-clock-history"></i> 
+            <span id="tituloHistorial">MIS COMPRAS</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <div class="modal-body p-4">
+          
+          <!-- Filtros (solo visible para admin) -->
+          <div id="filtrosHistorial" class="mb-4 p-4 rounded" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid #27ae60; display: none;">
+            <h6 class="fw-bold mb-3">
+              <i class="bi bi-funnel-fill"></i> FILTROS
+            </h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha Inicio</label>
+                <input type="date" id="filtroFechaInicio" class="form-control">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha Fin</label>
+                <input type="date" id="filtroFechaFin" class="form-control">
+              </div>
+              <div class="col-md-4 d-flex align-items-end">
+                <button id="btnFiltrarHistorial" class="btn btn-primary w-100">
+                  <i class="bi bi-search"></i> Filtrar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estadísticas (solo visible para admin) -->
+          <div id="estadisticasHistorial" class="mb-4" style="display: none;">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="card text-center" style="border: 3px solid #27ae60; background: linear-gradient(135deg, #d5f4e6 0%, #aed581 100%);">
+                  <div class="card-body">
+                    <i class="bi bi-cart-check-fill" style="font-size: 2rem; color: #27ae60;"></i>
+                    <h4 class="fw-bold mt-2 mb-0" id="statTotalVentas">0</h4>
+                    <p class="text-muted mb-0">Total Ventas</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card text-center" style="border: 3px solid #f39c12; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);">
+                  <div class="card-body">
+                    <i class="bi bi-cash-coin" style="font-size: 2rem; color: #f39c12;"></i>
+                    <h4 class="fw-bold mt-2 mb-0" id="statIngresos">$0.00</h4>
+                    <p class="text-muted mb-0">Ingresos Totales</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card text-center" style="border: 3px solid #e74c3c; background: linear-gradient(135deg, #fab1a0 0%, #ff7675 100%);">
+                  <div class="card-body">
+                    <i class="bi bi-star-fill" style="font-size: 2rem; color: #e74c3c;"></i>
+                    <h4 class="fw-bold mt-2 mb-0" id="statTopProducto">-</h4>
+                    <p class="text-muted mb-0">Más Vendido</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mensaje cuando no hay compras -->
+          <div id="sinCompras" class="text-center py-5" style="display: none;">
+            <i class="bi bi-cart-x" style="font-size: 4rem; color: #95a5a6;"></i>
+            <h5 class="mt-3 text-muted">No hay compras registradas</h5>
+            <p class="text-muted">Las compras aparecerán aquí</p>
+          </div>
+
+          <!-- Lista de compras -->
+          <div id="listaCompras">
+            <!-- Se llenará dinámicamente -->
+          </div>
+
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Contenedor de notificaciones -->
   <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;"></div>
 
@@ -465,6 +636,10 @@
       <small style="font-weight: 300; letter-spacing: 1px;">&copy; 2025 Todos los derechos reservados</small>
     </div>
   </footer>
+
+  <!-- Agregar CDN de html2canvas y jsPDF antes del cierre de </body> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Leaflet CSS (en el <head>) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -477,7 +652,6 @@
   
   <!-- Tu script principal -->
   <script src="script.js"></script>
-
   <script src="mapa.js"></script>
 </body>
 </html>

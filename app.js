@@ -112,7 +112,7 @@ app.post("/register", async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      "INSERT INTO usuario (nombre, email, password, rol) VALUES ($1, $2, $3, $4) RETURNING *",
+      "INSERT INTO usuario (nombre, email, password, rol, fondos) VALUES ($1, $2, $3, $4, 0) RETURNING *",
       [nombre, email, hashed, rol]
     );
 
@@ -142,6 +142,12 @@ app.post("/login", async (req, res) => {
     const user = result.rows[0];
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ error: "Credenciales inválidas." });
+
+    // Asegurar que fondos existe
+    if (user.fondos === null || user.fondos === undefined) {
+      user.fondos = 0;
+      await pool.query("UPDATE usuario SET fondos = 0 WHERE id_usuario = $1", [user.id_usuario]);
+    }
 
     req.session.user = user;
     res.json({ mensaje: "Inicio de sesión exitoso.", user });
@@ -486,70 +492,6 @@ app.post("/carrito/eliminar", async (req, res) => {
   }
 });
 
-// Checkout
-app.post("/carrito/checkout", async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    if (!req.session.user)
-      return res.status(401).json({ error: "Inicia sesión para comprar." });
-
-    const { id_usuario } = req.session.user;
-    
-    await client.query('BEGIN');
-    
-    // Obtener items del carrito
-    const items = await client.query(
-      "SELECT c.id_producto, c.cantidad, p.stock, p.nombre FROM carrito c JOIN producto p ON c.id_producto = p.id_producto WHERE c.id_usuario = $1",
-      [id_usuario]
-    );
-    
-    if (items.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: "El carrito está vacío." });
-    }
-    
-    // Validar stock para cada producto
-    for (const item of items.rows) {
-      if (item.cantidad > item.stock) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ 
-          error: `Stock insuficiente para "${item.nombre}". Disponible: ${item.stock}, solicitado: ${item.cantidad}` 
-        });
-      }
-    }
-    
-    // Crear la venta
-    const venta = await client.query(
-      "INSERT INTO venta (id_usuario) VALUES ($1) RETURNING id_venta",
-      [id_usuario]
-    );
-
-    // Actualizar stock y limpiar carrito
-    for (const item of items.rows) {
-      await client.query(
-        "UPDATE producto SET stock = stock - $1 WHERE id_producto = $2",
-        [item.cantidad, item.id_producto]
-      );
-    }
-
-    await client.query("DELETE FROM carrito WHERE id_usuario = $1", [id_usuario]);
-    
-    await client.query('COMMIT');
-
-    res.json({ 
-      mensaje: "Compra realizada con éxito.", 
-      id_venta: venta.rows[0].id_venta 
-    });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error("Error al procesar venta:", err);
-    res.status(500).json({ error: "Error al procesar venta." });
-  } finally {
-    client.release();
-  }
-});
-
 // RUTAS DE USUARIOS
 
 // Obtener usuarios
@@ -598,9 +540,7 @@ app.post("/usuarios/eliminar", requireAdmin, async (req, res) => {
   }
 });
 
-// ============================================
 // RUTAS DE VENTAS
-// ============================================
 
 // Registrar venta
 app.post("/venta", async (req, res) => {
@@ -635,6 +575,467 @@ app.post("/venta", async (req, res) => {
   }
 });
 
+// RUTAS DE FONDOS
+
+// Obtener fondos del usuario actual
+app.get("/fondos", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Inicia sesión." });
+    }
+    
+    const result = await pool.query(
+      "SELECT fondos FROM usuario WHERE id_usuario = $1",
+      [req.session.user.id_usuario]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado." });
+    }
+    
+    res.json({ fondos: parseFloat(result.rows[0].fondos) || 0 });
+  } catch (err) {
+    console.error("Error al obtener fondos:", err);
+    res.status(500).json({ error: "Error al obtener fondos." });
+  }
+});
+
+// Agregar fondos
+app.post("/fondos/agregar", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Inicia sesión." });
+    }
+
+    let { cantidad } = req.body;
+    cantidad = parseFloat(cantidad);
+
+    // Validaciones
+    if (isNaN(cantidad) || cantidad <= 0) {
+      return res.status(400).json({ error: "La cantidad debe ser mayor a 0." });
+    }
+
+    if (cantidad > 999999999999) {
+      return res.status(400).json({ error: "No puedes agregar más de $999,999,999,999." });
+    }
+
+    // Obtener fondos actuales
+    const result = await pool.query(
+      "SELECT fondos FROM usuario WHERE id_usuario = $1",
+      [req.session.user.id_usuario]
+    );
+
+    const fondosActuales = parseFloat(result.rows[0].fondos) || 0;
+    const nuevosFondos = fondosActuales + cantidad;
+
+    // Validar límite total
+    if (nuevosFondos > 999999999999) {
+      return res.status(400).json({ 
+        error: `El total de fondos no puede exceder $999,999,999,999. Actualmente tienes $${fondosActuales.toFixed(2)}` 
+      });
+    }
+
+    // Actualizar fondos
+    await pool.query(
+      "UPDATE usuario SET fondos = $1 WHERE id_usuario = $2",
+      [nuevosFondos, req.session.user.id_usuario]
+    );
+
+    // Actualizar sesión
+    req.session.user.fondos = nuevosFondos;
+
+    res.json({ 
+      mensaje: "Fondos agregados correctamente.", 
+      fondos: nuevosFondos 
+    });
+  } catch (err) {
+    console.error("Error al agregar fondos:", err);
+    res.status(500).json({ error: "Error al agregar fondos." });
+  }
+});
+
+// MODIFICAR EL CHECKOUT PARA USAR FONDOS
+
+app.post("/carrito/checkout", async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Inicia sesión para comprar." });
+    }
+
+    const { id_usuario } = req.session.user;
+
+    await client.query("BEGIN");
+
+    // 1. Obtener fondos
+    const userResult = await client.query(
+      "SELECT fondos FROM usuario WHERE id_usuario = $1",
+      [id_usuario]
+    );
+
+    if (userResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Usuario no encontrado." });
+    }
+
+    const fondosDisponibles = parseFloat(userResult.rows[0].fondos) || 0;
+
+    // 2. Obtener items del carrito
+    const items = await client.query(
+      `SELECT c.id_producto, c.cantidad, p.stock, p.nombre, p.precio
+      FROM carrito c
+      JOIN producto p ON c.id_producto = p.id_producto
+      WHERE c.id_usuario = $1
+      FOR UPDATE`,
+      [id_usuario]
+    );
+
+    if (items.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "El carrito está vacío." });
+    }
+
+    // 3. Validar stock
+    for (const item of items.rows) {
+      if (item.stock < item.cantidad) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          error: `Stock insuficiente para ${item.nombre}. Disponible: ${item.stock}, solicitado: ${item.cantidad}`
+        });
+      }
+    }
+
+    // 4. Calcular total
+    const total = items.rows.reduce(
+      (sum, item) => sum + item.precio * item.cantidad,
+      0
+    );
+
+    // 5. Validar fondos
+    if (fondosDisponibles < total) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: `Fondos insuficientes. Necesitas $${total.toFixed(2)}, tienes $${fondosDisponibles.toFixed(2)}`
+      });
+    }
+
+    // 6. Crear venta
+    const venta = await client.query(
+      "INSERT INTO venta (id_usuario, total) VALUES ($1, $2) RETURNING id_venta",
+      [id_usuario, total]
+    );
+
+    const id_venta = venta.rows[0].id_venta;
+
+    // 7. Reducir stock y registrar detalles
+    for (const item of items.rows) {
+      // Reducir stock
+      await client.query(
+        "UPDATE producto SET stock = stock - $1 WHERE id_producto = $2",
+        [item.cantidad, item.id_producto]
+      );
+
+      // Registrar detalle
+      await client.query(
+        `INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario)
+        VALUES ($1, $2, $3, $4)`,
+        [id_venta, item.id_producto, item.cantidad, item.precio]
+      );
+    }
+
+    // 8. Descontar fondos del usuario
+    const nuevosFondos = fondosDisponibles - total;
+
+    await client.query(
+      "UPDATE usuario SET fondos = $1 WHERE id_usuario = $2",
+      [nuevosFondos, id_usuario]
+    );
+
+    // Actualizar sesión
+    req.session.user.fondos = nuevosFondos;
+
+    // 9. Vaciar carrito
+    await client.query(
+      "DELETE FROM carrito WHERE id_usuario = $1",
+      [id_usuario]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({
+      mensaje: "Compra realizada con éxito.",
+      id_venta,
+      fondosRestantes: nuevosFondos
+    });
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("❌ Error en checkout:", err);
+    res.status(500).json({ error: "Error al procesar la compra." });
+  } finally {
+    client.release();
+  }
+});
+
+
+// Rutas para Ventas
+
+app.get('/venta/detalle/:id_venta', async (req, res) => {
+  const { id_venta } = req.params;
+
+  try {
+    const query = `
+      SELECT 
+        p.nombre,
+        dv.cantidad,
+        dv.precio_unitario
+      FROM detalle_venta dv
+      INNER JOIN producto p ON dv.id_producto = p.id_producto
+      WHERE dv.id_venta = $1
+    `;
+    
+    const result = await pool.query(query, [id_venta]);
+
+    res.json({
+      productos: result.rows
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo detalles de venta', error);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+app.post('/venta', async (req, res) => {
+  const { id_usuario, total } = req.body;
+
+  try {
+    const ventaQuery = `
+      INSERT INTO venta (id_usuario, total, fecha)
+      VALUES ($1, $2, NOW())
+      RETURNING *;
+    `;
+
+    const venta = await pool.query(ventaQuery, [id_usuario, total]);
+
+    // Obtener fondos actuales
+    const usuario = await pool.query(`SELECT fondos FROM usuario WHERE id_usuario = $1`, [id_usuario]);
+
+    // Actualizar fondos
+    const fondosRestantes = Number(usuario.rows[0].fondos) - Number(total);
+
+    await pool.query(`UPDATE usuario SET fondos = $1 WHERE id_usuario = $2`, [fondosRestantes, id_usuario]);
+
+    res.json({
+      ...venta.rows[0],
+      fondos_restantes: fondosRestantes
+    });
+
+  } catch (error) {
+    console.error("Error creando venta", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+app.post('/venta/detalle', async (req, res) => {
+  const { id_venta, id_producto, cantidad, precio_unitario } = req.body;
+
+  try {
+    const query = `
+      INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, created_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, [
+      id_venta,
+      id_producto,
+      cantidad,
+      precio_unitario
+    ]);
+
+    res.json(result.rows[0]);
+
+  } catch (error) {
+    console.error("Error guardando detalle_venta", error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+// AGREGAR ESTAS RUTAS A app.js
+
+// Obtener historial de compras del usuario actual
+app.get("/historial/mis-compras", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ error: "Inicia sesión." });
+    }
+
+    const { id_usuario } = req.session.user;
+
+    // Obtener todas las ventas del usuario
+    const ventas = await pool.query(
+      `SELECT 
+        v.id_venta,
+        v.total,
+        v.fecha,
+        u.nombre as cliente
+      FROM venta v
+      JOIN usuario u ON v.id_usuario = u.id_usuario
+      WHERE v.id_usuario = $1
+      ORDER BY v.fecha DESC`,
+      [id_usuario]
+    );
+
+    // Para cada venta, obtener los productos
+    const ventasConDetalles = await Promise.all(
+      ventas.rows.map(async (venta) => {
+        const detalles = await pool.query(
+          `SELECT 
+            p.nombre,
+            dv.cantidad,
+            dv.precio_unitario,
+            (dv.cantidad * dv.precio_unitario) as subtotal
+          FROM detalle_venta dv
+          JOIN producto p ON dv.id_producto = p.id_producto
+          WHERE dv.id_venta = $1`,
+          [venta.id_venta]
+        );
+
+        return {
+          ...venta,
+          productos: detalles.rows
+        };
+      })
+    );
+
+    res.json({ compras: ventasConDetalles });
+  } catch (err) {
+    console.error("Error al obtener historial:", err);
+    res.status(500).json({ error: "Error al obtener historial." });
+  }
+});
+
+// Obtener todas las compras (solo admin)
+app.get("/historial/todas", requireAdmin, async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin, id_usuario } = req.query;
+
+    let query = `
+      SELECT 
+        v.id_venta,
+        v.total,
+        v.fecha,
+        u.nombre as cliente,
+        u.email as email_cliente
+      FROM venta v
+      JOIN usuario u ON v.id_usuario = u.id_usuario
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramCount = 1;
+
+    // Filtro por fecha de inicio
+    if (fecha_inicio) {
+      query += ` AND v.fecha >= $${paramCount}`;
+      params.push(fecha_inicio);
+      paramCount++;
+    }
+
+    // Filtro por fecha fin
+    if (fecha_fin) {
+      query += ` AND v.fecha <= $${paramCount}`;
+      params.push(fecha_fin + ' 23:59:59');
+      paramCount++;
+    }
+
+    // Filtro por usuario
+    if (id_usuario) {
+      query += ` AND v.id_usuario = $${paramCount}`;
+      params.push(id_usuario);
+      paramCount++;
+    }
+
+    query += ` ORDER BY v.fecha DESC`;
+
+    const ventas = await pool.query(query, params);
+
+    // Para cada venta, obtener los productos
+    const ventasConDetalles = await Promise.all(
+      ventas.rows.map(async (venta) => {
+        const detalles = await pool.query(
+          `SELECT 
+            p.nombre,
+            dv.cantidad,
+            dv.precio_unitario,
+            (dv.cantidad * dv.precio_unitario) as subtotal
+          FROM detalle_venta dv
+          JOIN producto p ON dv.id_producto = p.id_producto
+          WHERE dv.id_venta = $1`,
+          [venta.id_venta]
+        );
+
+        return {
+          ...venta,
+          productos: detalles.rows
+        };
+      })
+    );
+
+    res.json({ compras: ventasConDetalles });
+  } catch (err) {
+    console.error("Error al obtener historial (admin):", err);
+    res.status(500).json({ error: "Error al obtener historial." });
+  }
+});
+
+// Obtener estadísticas de ventas (solo admin)
+app.get("/historial/estadisticas", requireAdmin, async (req, res) => {
+  try {
+    // Total de ventas
+    const totalVentas = await pool.query(
+      "SELECT COUNT(*) as total, SUM(total) as ingresos FROM venta"
+    );
+
+    // Productos más vendidos
+    const topProductos = await pool.query(
+      `SELECT 
+        p.nombre,
+        SUM(dv.cantidad) as cantidad_vendida,
+        SUM(dv.cantidad * dv.precio_unitario) as ingresos
+        FROM detalle_venta dv
+        JOIN producto p ON dv.id_producto = p.id_producto
+        GROUP BY p.id_producto, p.nombre
+        ORDER BY cantidad_vendida DESC
+        LIMIT 5`
+    );
+
+    // Ventas por mes (últimos 6 meses)
+    const ventasPorMes = await pool.query(
+      `SELECT 
+        TO_CHAR(fecha, 'YYYY-MM') as mes,
+        COUNT(*) as cantidad,
+        SUM(total) as ingresos
+      FROM venta
+      WHERE fecha >= NOW() - INTERVAL '6 months'
+      GROUP BY TO_CHAR(fecha, 'YYYY-MM')
+      ORDER BY mes DESC`
+    );
+
+    res.json({
+      total_ventas: parseInt(totalVentas.rows[0].total),
+      ingresos_totales: parseFloat(totalVentas.rows[0].ingresos) || 0,
+      productos_mas_vendidos: topProductos.rows,
+      ventas_por_mes: ventasPorMes.rows
+    });
+  } catch (err) {
+    console.error("Error al obtener estadísticas:", err);
+    res.status(500).json({ error: "Error al obtener estadísticas." });
+  }
+});
+  
 // INICIAR SERVIDOR
 
 const PORT = process.env.PORT || 10000;

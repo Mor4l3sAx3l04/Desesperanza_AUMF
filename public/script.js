@@ -1,7 +1,8 @@
-// script.js - Frontend con auth, carrito y rol-based UI
+// script.js - Frontend con auth, carrito, fondos y rol-based UI
+let currentUser = null;
+let fondosUsuario = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
-
   // elementos auth
   window.formRegister = document.getElementById('formRegister');
   window.formLogin = document.getElementById('formLogin');
@@ -33,34 +34,81 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Form producto
-    document.getElementById('formProducto').addEventListener('submit', guardarProducto);
-    document.getElementById('modalProducto').addEventListener('hidden.bs.modal', () => {
+  document.getElementById('formProducto').addEventListener('submit', guardarProducto);
+  document.getElementById('modalProducto').addEventListener('hidden.bs.modal', () => {
     document.getElementById('formProducto').reset();
     document.getElementById('id_producto').value = '';
     document.getElementById('mensajeError').classList.add('d-none');
   });
 
+  // Botón Conócenos
+  document.getElementById("btnConocenos").addEventListener("click", () => {
+    new bootstrap.Modal(document.getElementById("modalConocenos")).show();
+  });
+
+  // Form nuevo usuario
+  document.getElementById("formNuevoUsuario").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById("nuevoNombre").value.trim();
+    const email = document.getElementById("nuevoEmail").value.trim();
+    const rol = document.getElementById("nuevoRol").value;
+    if (!nombre || !email) return;
+
+    const res = await fetch("/usuarios/agregar", {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ nombre, email, rol })
+    }).then(r=>r.json());
+
+    if (res.error) showToast(res.error, "error");
+    else {
+      document.getElementById("formNuevoUsuario").reset();
+      cargarUsuarios();
+    }
+  });
+
+  // Reset password
+  document.getElementById("formResetPassword").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById("resetNombre").value.trim();
+    const email = document.getElementById("resetEmail").value.trim();
+    const newPassword = document.getElementById("resetPassword").value;
+
+    try {
+      const res = await fetch("/resetPassword", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, email, newPassword })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Contraseña cambiada correctamente. Ya puedes iniciar sesión.", "success");
+      } else {
+        showToast(data.error, "error");
+      }
+    } catch (err) {
+      showToast("Error al conectar con el servidor.", "error");
+    }
+  });
+
+  // Checkout
+  document.getElementById('btnCheckout').addEventListener('click', handleCheckout);
+
   // Inicializar estado: si ya hay sesión, entrar
   fetch('/me').then(r => r.json()).then(data => {
     if (data.user) {
-      onLogin(data.user); // 👈 esto ya llama a cargarProductos()
+      onLogin(data.user);
     } else {
       showRegister();
-      // Si quieres que el cliente también vea productos antes de loguearse:
-      cargarProductos();
     }
     cargarGaleria();
     actualizarBadge();
   });
-  document.getElementById('btnLogin').addEventListener('click', login);
-  document.getElementById('btnRegistrar').addEventListener('click', registrar);
-  document.getElementById('btnLogout').addEventListener('click', logout);
-  document.getElementById('btnAgregarPan').addEventListener('click', abrirModal);
-  document.getElementById('guardarProducto').addEventListener('click', guardarProducto);
-  document.getElementById('btnCheckout').addEventListener('click', checkout);
 });
 
-// ---------- Auth ----------
+// AUTENTICACIÓN
+
 function showLogin() {
   document.getElementById('authTitle').textContent = 'Iniciar sesión';
   document.getElementById('formRegister').classList.add('d-none');
@@ -68,10 +116,12 @@ function showLogin() {
   document.getElementById('authError').classList.add('d-none');
   document.getElementById('loginError').classList.add('d-none');
 }
+
 function showRegister() {
   document.getElementById('authTitle').textContent = 'Crear cuenta';
   document.getElementById('formRegister').classList.remove('d-none');
   document.getElementById('formLogin').classList.add('d-none');
+  document.getElementById('authError').classList.add('d-none');
 }
 
 async function handleRegister(e) {
@@ -79,7 +129,7 @@ async function handleRegister(e) {
   const nombre = document.getElementById('regNombre').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
-  const rol = document.getElementById('isAdmin').checked ? 'admin' : 'cliente';
+  const rol = document.getElementById('rolInput') ? document.getElementById('rolInput').value : 'cliente';
 
   const resp = await fetch('/register', {
     method: 'POST',
@@ -93,6 +143,8 @@ async function handleRegister(e) {
     el.classList.remove('d-none');
     return;
   }
+  
+  showToast("Registro exitoso. Iniciando sesión...", "success");
   onLogin(resp.user);
 }
 
@@ -119,15 +171,14 @@ async function handleLogin(e) {
 async function handleLogout(e) {
   e.preventDefault();
   await fetch('/logout', { method: 'POST' }).then(r => r.json());
-  // volver a inicio
   document.getElementById('authOverlay').classList.remove('d-none');
   document.getElementById('mainApp').style.display = 'none';
+  currentUser = null;
+  fondosUsuario = 0;
   showRegister();
   actualizarBadge();
 }
 
-// ---------- Estado post-login ----------
-let currentUser = null;
 function onLogin(user) {
   currentUser = user;
   document.getElementById('authOverlay').classList.add('d-none');
@@ -141,53 +192,194 @@ function onLogin(user) {
 
   actualizarPerfilDropdown();
   actualizarBadge();
-
-  // 👇 Ahora que ya sabemos el rol, cargamos los productos
   cargarProductos();
+  cargarFondos();
 }
 
-// mostrar opciones en dropdown segun rol
+// SISTEMA DE FONDOS
+
+async function cargarFondos() {
+  if (!currentUser) return;
+  
+  try {
+    const resp = await fetch('/fondos').then(r => r.json());
+    fondosUsuario = parseFloat(resp.fondos) || 0;
+    actualizarDisplayFondos();
+  } catch (err) {
+    console.error('Error al cargar fondos:', err);
+  }
+}
+
+function actualizarDisplayFondos() {
+  if (fondosUsuario == null || isNaN(fondosUsuario)) {
+    fondosUsuario = 0;
+  }
+
+  const fondosElement = document.getElementById('fondosDisplay');
+  if (!fondosElement) {
+    console.warn("fondosDisplay no existe todavía.");
+    return;
+  }
+
+  fondosElement.textContent = `$${fondosUsuario.toFixed(2)}`;
+}
+
+
+async function agregarFondos() {
+  const cantidad = prompt('¿Cuánto dinero deseas agregar?\n(Máximo: $999,999,999,999)');
+  
+  if (cantidad === null || cantidad.trim() === '') return;
+  
+  const cantidadNum = parseFloat(cantidad);
+  
+  if (isNaN(cantidadNum) || cantidadNum <= 0) {
+    showToast('Por favor ingresa una cantidad válida.', 'error');
+    return;
+  }
+  
+  if (cantidadNum > 999999999999) {
+    showToast('No puedes agregar más de $999,999,999,999 de una sola vez.', 'error');
+    return;
+  }
+  
+  try {
+    const resp = await fetch('/fondos/agregar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cantidad: cantidadNum })
+    }).then(r => r.json());
+    
+    if (resp.error) {
+      showToast(resp.error, 'error');
+      return;
+    }
+    
+    fondosUsuario = parseFloat(resp.fondos);
+    actualizarDisplayFondos();
+    showToast(`¡Fondos agregados! Nuevo saldo: $${resp.fondos.toFixed(2)}`, 'success');
+  } catch (err) {
+    showToast('Error al agregar fondos.', 'error');
+  }
+}
+
+// PERFIL DROPDOWN
+
 function actualizarPerfilDropdown() {
   const menu = document.getElementById('perfilDropdown');
   menu.innerHTML = '';
+  
+  // Nombre del usuario
   const liNombre = document.createElement('li');
   liNombre.innerHTML = `<h6 class="dropdown-header">${escapeHtml(currentUser.nombre)}</h6>`;
   menu.appendChild(liNombre);
+  
+  // Fondos disponibles
+  const liFondos = document.createElement('li');
+  liFondos.innerHTML = `
+    <div class="dropdown-item-text">
+      <strong>💰 Fondos:</strong> 
+      <span id="fondosDisplay" class="text-success fw-bold">$${fondosUsuario.toFixed(2)}</span>
+    </div>
+  `;
+  menu.appendChild(liFondos);
+  
+  // Botón agregar fondos
+  const liAgregarFondos = document.createElement('li');
+  liAgregarFondos.innerHTML = `
+    <a class="dropdown-item" href="#" id="btnAgregarFondos">
+      <i class="bi bi-wallet2"></i> Agregar Fondos
+    </a>
+  `;
+  menu.appendChild(liAgregarFondos);
+  
+  // Historial de compras
+  const liHistorial = document.createElement('li');
+  liHistorial.innerHTML = `
+    <a class="dropdown-item" href="#" id="btnHistorial">
+      <i class="bi bi-clock-history"></i> Mis Compras
+    </a>
+  `;
+  menu.appendChild(liHistorial);
+  
+  // Si es admin, agregar opciones de admin
   if (currentUser.rol === 'admin') {
-  const liGestionUsuarios = document.createElement('li');
-  liGestionUsuarios.innerHTML = `<a class="dropdown-item" href="#" id="gestionarUsuarios">Gestionar usuarios</a>`;
-  menu.appendChild(liGestionUsuarios);
-
+    const liDivider = document.createElement('li');
+    liDivider.innerHTML = `<hr class="dropdown-divider">`;
+    menu.appendChild(liDivider);
+    
+    const liGestionUsuarios = document.createElement('li');
+    liGestionUsuarios.innerHTML = `
+      <a class="dropdown-item" href="#" id="gestionarUsuarios">
+        <i class="bi bi-people-fill"></i> Gestionar Usuarios
+      </a>
+    `;
+    menu.appendChild(liGestionUsuarios);
+    
+    const liGraficos = document.createElement('li');
+    liGraficos.innerHTML = `
+      <a class="dropdown-item" href="#" id="verGraficos">
+        <i class="bi bi-graph-up"></i> Ver Estadísticas
+      </a>
+    `;
+    menu.appendChild(liGraficos);
+  }
+  
+  // Logout
+  const liLogout = document.createElement('li');
+  liLogout.innerHTML = `
+    <hr class="dropdown-divider">
+    <a class="dropdown-item text-danger" href="#" id="logoutBtn2">
+      <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+    </a>
+  `;
+  menu.appendChild(liLogout);
+  
+  // Asignar eventos
   setTimeout(() => {
+    const btnAF = document.getElementById('btnAgregarFondos');
+    if (btnAF) btnAF.addEventListener('click', (e) => {
+      e.preventDefault();
+      agregarFondos();
+    });
+    
+    const btnH = document.getElementById('btnHistorial');
+    if (btnH) btnH.addEventListener('click', (e) => {
+      e.preventDefault();
+      abrirHistorialCompras();
+    });
+    
     const btnGU = document.getElementById('gestionarUsuarios');
     if (btnGU) btnGU.addEventListener('click', (e) => {
       e.preventDefault();
       cargarUsuarios();
       new bootstrap.Modal(document.getElementById('modalUsuarios')).show();
     });
-  }, 10);
-}
-  const liLogout = document.createElement('li');
-  liLogout.innerHTML = `<hr class="dropdown-divider"><a class="dropdown-item" href="#" id="logoutBtn2">Cerrar sesión</a>`;
-  menu.appendChild(liLogout);
-  setTimeout(() => {
+    
+    const btnG = document.getElementById('verGraficos');
+    if (btnG) btnG.addEventListener('click', (e) => {
+      e.preventDefault();
+      abrirGraficos();
+    });
+    
     const l = document.getElementById('logoutBtn2');
     if (l) l.addEventListener('click', handleLogout);
   }, 10);
 }
 
+
+// PRODUCTOS
+
 function cargarProductos() {
-  fetch('/productos')  // 👈 AGREGUÉ LA /
+  fetch('/productos')
     .then(res => res.json())
     .then(productos => {
       const tbody = document.querySelector('#tablaProductos tbody');
       tbody.innerHTML = '';
       productos.forEach((prod, idx) => {
-        const imgSrc = prod.tiene_imagen  // 👈 CAMBIÉ A tiene_imagen
+        const imgSrc = prod.tiene_imagen
         ? `/imagen/${prod.id_producto}?t=${Date.now()}`
         : 'https://via.placeholder.com/150?text=Sin+Imagen';
 
-        // acciones: si admin -> editar/borrar; si cliente -> agregar al carrito
         let acciones = '';
         if (currentUser && currentUser.rol === 'admin') {
           acciones = `
@@ -210,7 +402,6 @@ function cargarProductos() {
         `;
       });
       
-      // 👇 ASIGNAR EVENTOS A LOS BOTONES DESPUÉS DE CREARLOS
       document.querySelectorAll('.btn-editar').forEach(btn => {
         btn.addEventListener('click', function() {
           editarProducto(this.getAttribute('data-prod'));
@@ -231,7 +422,6 @@ function cargarProductos() {
     });
 }
 
-// guardar/actualizar producto (admin)
 function guardarProducto(e) {
   e.preventDefault();
   const form = e.target;
@@ -249,6 +439,7 @@ function guardarProducto(e) {
     mensajeError.classList.remove('d-none');
     return;
   }
+  
   const etiquetaRegex = /<[^>]*>|<\?php.*?\?>/i;
   const numeroRegex = /\d/;
   if (etiquetaRegex.test(nombre) || etiquetaRegex.test(descripcion)) {
@@ -270,6 +461,7 @@ function guardarProducto(e) {
   if (imagenInput.files && imagenInput.files[0]) {
     formData.append('imagen', imagenInput.files[0]);
   }
+  
   let url = '/agregarProducto';
   if (id) {
     formData.append('id_producto', id);
@@ -319,9 +511,8 @@ function borrarProducto(id) {
   });
 }
 
-// ---------- Galería (simple estática, editable por admin manualmente desde DB en esta versión) ----------
+// GALERÍA
 function cargarGaleria() {
-  // Mantengo tu galería por defecto (puedes hacer endpoint para editar)
   const panes = [
     { nombre: 'Pan de Muerto', descripcion: 'Tradicional pan mexicano decorado con "huesitos" de masa y azúcar.', precio: 25, img: 'https://images.pexels.com/photos/19132888/pexels-photo-19132888.jpeg' },
     { nombre: 'Calaverita de Azúcar', descripcion: 'Dulce típico de Día de Muertos hecho de azúcar y decorado a mano.', precio: 15, img: 'https://images.pexels.com/photos/5702776/pexels-photo-5702776.jpeg' },
@@ -343,12 +534,10 @@ function cargarGaleria() {
   `).join('');
 }
 
-// ---------- Carrito (frontend) ----------
-
+// CARRITO
 async function agregarAlCarrito(id_producto) {
   if (!currentUser) return showToast('Debes iniciar sesión para agregar al carrito.', "warning");
   
-  // Obtener el stock disponible del producto
   const productoResp = await fetch('/productos').then(r => r.json());
   const producto = productoResp.find(p => p.id_producto == id_producto);
   
@@ -360,12 +549,10 @@ async function agregarAlCarrito(id_producto) {
     return showToast('Este producto está agotado.', "warning");
   }
   
-  // Verificar cuánto ya tiene en el carrito
   const carritoResp = await fetch('/carrito').then(r => r.json());
   const itemEnCarrito = (carritoResp.items || []).find(it => it.id_producto == id_producto);
   const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.cantidad : 0;
   
-  // Validar que no exceda el stock
   if (cantidadEnCarrito >= producto.stock) {
     return showToast(`No puedes agregar más. Stock disponible: ${producto.stock}`, "warning");
   }
@@ -394,7 +581,6 @@ async function cargarCarrito() {
     return;
   }
   
-  // Obtener stocks actuales
   const productosResp = await fetch('/productos').then(r => r.json());
   
   container.innerHTML = items.map(it => {
@@ -425,11 +611,9 @@ async function cargarCarrito() {
     `;
   }).join('');
   
-  // Asignar eventos con validación de stock
   document.querySelectorAll('.qty-input').forEach(input => {
     input.addEventListener('change', async function() {
       const id = this.dataset.id;
-      const productoId = this.dataset.productoId;
       let cantidad = Number(this.value);
       const max = Number(this.max);
       
@@ -473,7 +657,6 @@ async function cargarCarrito() {
   document.getElementById('carritoTotal').textContent = total.toFixed(2);
 }
 
-// badge
 async function actualizarBadge() {
   const resp = await fetch('/carrito').then(r => r.json());
   const count = (resp.items || []).reduce((s, it) => s + Number(it.cantidad), 0);
@@ -481,105 +664,112 @@ async function actualizarBadge() {
   badgeCarrito.style.display = count > 0 ? 'inline-block' : 'none';
 }
 
-// checkout
-document.getElementById('btnCheckout').addEventListener('click', async () => {
-  // Obtener items del carrito
-  const carritoResp = await fetch('/carrito').then(r => r.json());
-  const items = carritoResp.items || [];
-  
-  if (items.length === 0) {
-    return showToast('Tu carrito está vacío.', "warning");
-  }
-  
-  // Validar stock antes de procesar
-  const productosResp = await fetch('/productos').then(r => r.json());
-  let hayError = false;
-  
-  for (const item of items) {
-    const producto = productosResp.find(p => p.id_producto == item.id_producto);
-    if (!producto || producto.stock < item.cantidad) {
-      hayError = true;
-      showToast(`No hay suficiente stock de "${item.nombre}". Disponible: ${producto ? producto.stock : 0}`, "error");
-    }
-  }
-  
-  if (hayError) {
-    showToast('Por favor ajusta las cantidades en tu carrito.', "warning");
-    cargarCarrito(); // Recargar para actualizar stocks
-    return;
-  }
-  
-  // Procesar compra
-  const r = await fetch('/carrito/checkout', { method: 'POST' }).then(r => r.json());
-  if (r.error) return showToast(r.error, "error");
-  
-  showToast(r.mensaje || "Compra exitosa", "success");
-  cargarProductos();
-  cargarCarrito();
-  actualizarBadge();
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCarrito')).hide();
-});
+// CHECKOUT
 
-function validarPassword(password) {
-  // Expresión regular:
-  // Al menos una minúscula, una mayúscula, un número y un carácter especial, y mínimo 8 caracteres
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#._-])[A-Za-z\d@$!%*?&#._-]{8,}$/;
-  return regex.test(password);
+async function handleCheckout() {
+  try {
+    // 1. Obtener carrito
+    const carritoResp = await fetch('/carrito').then(r => r.json());
+    const items = carritoResp.items || [];
+
+    if (items.length === 0) {
+      return showToast('Tu carrito está vacío.', "warning");
+    }
+
+    // 2. Obtener productos actuales
+    const productosResp = await fetch('/productos').then(r => r.json());
+
+    // 3. Validar stock
+    let hayErrorStock = false;
+    for (const item of items) {
+      const producto = productosResp.find(p => p.id_producto == item.id_producto);
+      if (!producto || producto.stock < item.cantidad) {
+        hayErrorStock = true;
+        showToast(
+          `Stock insuficiente de "${item.nombre}". Disponible: ${producto ? producto.stock : 0}, en carrito: ${item.cantidad}`, 
+          'error'
+        );
+      }
+    }
+    
+    if (hayErrorStock) {
+      showToast('Por favor ajusta las cantidades en tu carrito.', 'warning');
+      await cargarCarrito();
+      return;
+    }
+
+    // 4. Calcular total
+    const total = items.reduce((s, it) => s + (Number(it.precio) * Number(it.cantidad)), 0);
+
+    // 5. Recargar fondos
+    await cargarFondos();
+
+    // 6. Validar fondos
+    if (fondosUsuario < total) {
+      showToast(
+        `Fondos insuficientes. Necesitas $${total.toFixed(2)} pero tienes $${fondosUsuario.toFixed(2)}`, 
+        'error'
+      );
+      return;
+    }
+
+    // 7. Confirmar compra
+    const confirmacion = confirm(
+      `¿Confirmar compra?\n\n` +
+      `Total: $${total.toFixed(2)}\n` +
+      `Fondos disponibles: $${fondosUsuario.toFixed(2)}\n` +
+      `Fondos restantes: $${(fondosUsuario - total).toFixed(2)}`
+    );
+
+    if (!confirmacion) return;
+
+    // 8. Procesar compra
+    const response = await fetch('/carrito/checkout', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const r = await response.json();
+
+    if (!response.ok || r.error) {
+      showToast(r.error || 'Error al procesar la compra', "error");
+      return;
+    }
+
+    // 9. Actualizar fondos localmente
+    fondosUsuario = parseFloat(r.fondosRestantes);
+    actualizarDisplayFondos();
+
+    // 10. Mostrar confirmación
+    showToast(`¡Compra exitosa! Total: $${total.toFixed(2)}`, "success");
+
+    // 11. Actualizar interfaz
+    await cargarProductos();
+    await cargarCarrito();
+    await actualizarBadge();
+
+    // 12. Cerrar modal del carrito
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCarrito')).hide();
+
+    // 13. MOSTRAR TICKET - AQUÍ ESTABA EL PROBLEMA
+    setTimeout(() => {
+      mostrarTicket({
+        id_venta: r.id_venta,
+        total: total,
+        fondos_restantes: r.fondosRestantes,
+        fecha: new Date(),
+        items: items // Pasar los items comprados
+      });
+    }, 500);
+
+  } catch (err) {
+    console.error('Error en checkout:', err);
+    showToast('Error al procesar la compra.', 'error');
+  }
 }
 
-// script.js
-document.addEventListener("DOMContentLoaded", () => {
-  const formRegister = document.getElementById("formRegister");
-  const authError = document.getElementById("authError");
 
-  if (formRegister) {
-    formRegister.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const nombre = document.getElementById("regNombre").value.trim();
-      const email = document.getElementById("regEmail").value.trim();
-      const password = document.getElementById("regPassword").value.trim();
-      const rol = document.getElementById("rolInput").value;
-
-      if (!nombre || !email || !password) {
-        mostrarError("Todos los campos son obligatorios.");
-        return;
-      }
-
-      try {
-        const res = await fetch("/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre, email, password, rol }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || "Error al registrar.");
-
-        showToast("✅ Registro exitoso. Ahora inicia sesión.", "success");
-        authError.classList.add("d-none");
-
-        console.log("Usuario registrado:", data.user);
-
-        // Cambiar a la vista de login
-        showLogin();
-      } catch (err) {
-        mostrarError(err.message);
-      }
-    });
-  }
-
-  function mostrarError(msg) {
-    authError.textContent = msg;
-    authError.classList.remove("d-none");
-  }
-});
-
-document.getElementById("btnConocenos").addEventListener("click", () => {
-  new bootstrap.Modal(document.getElementById("modalConocenos")).show();
-});
-
+// USUARIOS (ADMIN)
 async function cargarUsuarios() {
   const res = await fetch('/usuarios');
   const usuarios = await res.json();
@@ -611,88 +801,440 @@ async function eliminarUsuario(id) {
   else cargarUsuarios();
 }
 
-document.getElementById("formNuevoUsuario").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const nombre = document.getElementById("nuevoNombre").value.trim();
-  const email = document.getElementById("nuevoEmail").value.trim();
-  const rol = document.getElementById("nuevoRol").value;
-  if (!nombre || !email) return;
-
-  const res = await fetch("/usuarios/agregar", {
-    method: "POST",
-    headers: { "Content-Type":"application/json" },
-    body: JSON.stringify({ nombre, email, rol })
-  }).then(r=>r.json());
-
-  if (res.error) showToast(res.error, "error");
-  else {
-    document.getElementById("formNuevoUsuario").reset();
-    cargarUsuarios();
-  }
-});
-
-// Reset password
-document.getElementById("formResetPassword").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const nombre = document.getElementById("resetNombre").value.trim();
-    const email = document.getElementById("resetEmail").value.trim();
-    const newPassword = document.getElementById("resetPassword").value;
-
-    try {
-        const res = await fetch("/resetPassword", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nombre, email, newPassword })
-        });
-        const data = await res.json();
-
-        if (res.ok) {
-            showToast("Contraseña cambiada correctamente. Ya puedes iniciar sesión.", "success");
-        } else {
-            showToast(data.error, "error");
-        }
-
-    } catch (err) {
-        showToast("Error al conectar con el servidor.", "error");
-    }
-});
-
-// Función para mostrar notificaciones flotantes
-function showToast(message, type = "success") {
-    const container = document.getElementById("toast-container");
-
-    // id único
-    const id = "toast-" + Date.now();
-
-    // Colores según tipo
-    let bg = "bg-success";
-    if (type === "error") bg = "bg-danger";
-    if (type === "info") bg = "bg-primary";
-    if (type === "warning") bg = "bg-warning text-dark";
-
-    // Crear toast
-    const toast = document.createElement("div");
-    toast.id = id;
-    toast.className = `toast align-items-center text-white ${bg} border-0 mb-2 show`;
-    toast.role = "alert";
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">${message}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    `;
-
-    container.appendChild(toast);
-
-    // Desaparecer automático a los 3 segundos
-    setTimeout(() => {
-        toast.classList.remove("show");
-        setTimeout(() => toast.remove(), 300); // dar tiempo a animación
-    }, 3000);
+// PLACEHOLDERS
+function abrirHistorialCompras() {
+  showToast('Historial de compras - Próximamente', 'info');
 }
 
-// ---------- util ----------
+function abrirGraficos() {
+  showToast('Estadísticas - Próximamente', 'info');
+}
+
+// UTILIDADES
+function showToast(message, type = "success") {
+  const container = document.getElementById("toast-container");
+  const id = "toast-" + Date.now();
+
+  let bg = "bg-success";
+  if (type === "error") bg = "bg-danger";
+  if (type === "info") bg = "bg-primary";
+  if (type === "warning") bg = "bg-warning text-dark";
+
+  const toast = document.createElement("div");
+  toast.id = id;
+  toast.className = `toast align-items-center text-white ${bg} border-0 mb-2 show`;
+  toast.role = "alert";
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 function escapeHtml(unsafe) {
   if (!unsafe) return '';
-  return String(unsafe).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]; });
+  return String(unsafe).replace(/[&<>"']/g, function(m){ 
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]; 
+  });
 }
+
+// AGREGAR ESTAS FUNCIONES AL FINAL DE script.js
+
+// Función para mostrar el ticket
+async function mostrarTicket(venta) {
+  try {
+    // Llenar datos del ticket
+    document.getElementById('ticketNumVenta').textContent = `#${venta.id_venta}`;
+    
+    // Formatear fecha
+    const fecha = new Date(venta.fecha);
+    const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    document.getElementById('ticketFecha').textContent = fechaFormateada;
+    
+    // Cliente
+    document.getElementById('ticketCliente').textContent = currentUser.nombre;
+    
+    // Productos
+    const productosHTML = venta.items.map((prod, index) => `
+      <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px dashed #e0e0e0;">
+        <div style="flex: 1;">
+          <span class="fw-semibold" style="color: #3e2723;">${index + 1}. ${prod.nombre}</span><br>
+          <small style="color: #5d4037;">${prod.cantidad} x $${parseFloat(prod.precio).toFixed(2)}</small>
+        </div>
+        <div class="text-end">
+          <span class="fw-bold" style="color: #d4af37;">$${(parseFloat(prod.precio) * parseInt(prod.cantidad)).toFixed(2)}</span>
+        </div>
+      </div>
+    `).join('');
+    
+    document.getElementById('ticketProductos').innerHTML = productosHTML;
+    
+    // Total
+    document.getElementById('ticketTotal').textContent = `$${parseFloat(venta.total).toFixed(2)}`;
+    document.getElementById('ticketFondosRestantes').textContent = `$${parseFloat(venta.fondos_restantes).toFixed(2)}`;
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalTicket'));
+    modal.show();
+    
+  } catch (error) {
+    console.error('Error al mostrar ticket:', error);
+    showToast('Error al mostrar el ticket', 'error');
+  }
+}
+
+// Función alternativa si no hay endpoint de detalles
+function mostrarTicketSimple(venta) {
+  document.getElementById('ticketNumVenta').textContent = `#${venta.id_venta}`;
+  
+  const fecha = new Date(venta.fecha);
+  const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  document.getElementById('ticketFecha').textContent = fechaFormateada;
+  document.getElementById('ticketCliente').textContent = currentUser.nombre;
+  
+  // Sin productos específicos
+  document.getElementById('ticketProductos').innerHTML = `
+    <div class="text-center p-3" style="background: rgba(212, 175, 55, 0.1); border-radius: 8px;">
+      <p class="mb-0" style="color: #5d4037;">Compra realizada exitosamente</p>
+    </div>
+  `;
+  
+  document.getElementById('ticketTotal').textContent = `$${parseFloat(venta.total).toFixed(2)}`;
+  document.getElementById('ticketFondosRestantes').textContent = `$${parseFloat(venta.fondos_restantes).toFixed(2)}`;
+  
+  const modal = new bootstrap.Modal(document.getElementById('modalTicket'));
+  modal.show();
+}
+
+// Función para descargar el ticket como imagen/PDF
+document.addEventListener('DOMContentLoaded', () => {
+  // Esperar un momento para que html2canvas y jsPDF se carguen
+  setTimeout(() => {
+    const btnDescargar = document.getElementById('btnDescargarTicket');
+    if (btnDescargar) {
+      btnDescargar.addEventListener('click', async () => {
+        const ticketContent = document.getElementById('ticketContent');
+        
+        try {
+          // Verificar que las librerías estén cargadas
+          if (typeof html2canvas === 'undefined') {
+            showToast('Error: html2canvas no está cargado', 'error');
+            return;
+          }
+          
+          if (typeof window.jspdf === 'undefined') {
+            showToast('Error: jsPDF no está cargado', 'error');
+            return;
+          }
+          
+          // Mostrar mensaje de espera
+          btnDescargar.disabled = true;
+          btnDescargar.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
+          
+          // Capturar el contenido como imagen
+          const canvas = await html2canvas(ticketContent, {
+            backgroundColor: '#fff8e1',
+            scale: 2,
+            logging: false,
+            useCORS: true
+          });
+          
+          // Convertir a PDF
+          const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a5'
+          });
+          
+          const imgWidth = 148;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+          
+          // Descargar
+          const numVenta = document.getElementById('ticketNumVenta').textContent;
+          pdf.save(`Ticket_${numVenta}_Panaderia_La_Desesperanza.pdf`);
+          
+          showToast('¡Ticket descargado exitosamente!', 'success');
+          
+        } catch (error) {
+          console.error('Error al descargar ticket:', error);
+          showToast('Error al descargar el ticket: ' + error.message, 'error');
+        } finally {
+          // Restaurar botón
+          btnDescargar.disabled = false;
+          btnDescargar.innerHTML = '<i class="bi bi-download"></i> Descargar Ticket';
+        }
+      });
+    }
+  }, 1000);
+});
+
+// AGREGAR AL FINAL DE script.js
+
+// Función para abrir el historial de compras
+async function abrirHistorialCompras() {
+  try {
+    const modal = new bootstrap.Modal(document.getElementById('modalHistorial'));
+    
+    // Configurar el modal según el rol
+    if (currentUser.rol === 'admin') {
+      document.getElementById('tituloHistorial').textContent = 'TODAS LAS COMPRAS';
+      document.getElementById('filtrosHistorial').style.display = 'block';
+      document.getElementById('estadisticasHistorial').style.display = 'block';
+      
+      // Cargar estadísticas
+      await cargarEstadisticas();
+      
+      // Cargar todas las compras
+      await cargarHistorialAdmin();
+    } else {
+      document.getElementById('tituloHistorial').textContent = 'MIS COMPRAS';
+      document.getElementById('filtrosHistorial').style.display = 'none';
+      document.getElementById('estadisticasHistorial').style.display = 'none';
+      
+      // Cargar solo las compras del usuario
+      await cargarMisCompras();
+    }
+    
+    modal.show();
+  } catch (err) {
+    console.error('Error al abrir historial:', err);
+    showToast('Error al cargar el historial', 'error');
+  }
+}
+
+// Cargar las compras del usuario actual
+async function cargarMisCompras() {
+  try {
+    const resp = await fetch('/historial/mis-compras').then(r => r.json());
+    
+    if (resp.error) {
+      showToast(resp.error, 'error');
+      return;
+    }
+    
+    mostrarCompras(resp.compras);
+  } catch (err) {
+    console.error('Error al cargar mis compras:', err);
+    showToast('Error al cargar las compras', 'error');
+  }
+}
+
+// Cargar todas las compras (admin)
+async function cargarHistorialAdmin(filtros = {}) {
+  try {
+    let url = '/historial/todas';
+    const params = new URLSearchParams(filtros);
+    if (params.toString()) {
+      url += '?' + params.toString();
+    }
+    
+    const resp = await fetch(url).then(r => r.json());
+    
+    if (resp.error) {
+      showToast(resp.error, 'error');
+      return;
+    }
+    
+    mostrarCompras(resp.compras);
+  } catch (err) {
+    console.error('Error al cargar historial admin:', err);
+    showToast('Error al cargar el historial', 'error');
+  }
+}
+
+// Cargar estadísticas (admin)
+async function cargarEstadisticas() {
+  try {
+    const resp = await fetch('/historial/estadisticas').then(r => r.json());
+    
+    if (resp.error) {
+      console.error('Error al cargar estadísticas:', resp.error);
+      return;
+    }
+    
+    // Actualizar estadísticas
+    document.getElementById('statTotalVentas').textContent = resp.total_ventas;
+    document.getElementById('statIngresos').textContent = `$${resp.ingresos_totales.toFixed(2)}`;
+    
+    if (resp.productos_mas_vendidos.length > 0) {
+      document.getElementById('statTopProducto').textContent = resp.productos_mas_vendidos[0].nombre;
+    } else {
+      document.getElementById('statTopProducto').textContent = '-';
+    }
+  } catch (err) {
+    console.error('Error al cargar estadísticas:', err);
+  }
+}
+
+// Mostrar las compras en el modal
+function mostrarCompras(compras) {
+  const container = document.getElementById('listaCompras');
+  const sinCompras = document.getElementById('sinCompras');
+  
+  if (!compras || compras.length === 0) {
+    container.innerHTML = '';
+    sinCompras.style.display = 'block';
+    return;
+  }
+  
+  sinCompras.style.display = 'none';
+  
+  container.innerHTML = compras.map((compra, index) => {
+    const fecha = new Date(compra.fecha);
+    const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const productosHTML = compra.productos.map(prod => `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="color: #5d4037;">
+          <i class="bi bi-dot"></i> ${prod.nombre} (x${prod.cantidad})
+        </span>
+        <span class="fw-semibold" style="color: #d4af37;">$${parseFloat(prod.subtotal).toFixed(2)}</span>
+      </div>
+    `).join('');
+    
+    return `
+      <div class="card mb-3" style="border: 3px solid #27ae60; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); overflow: hidden;">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-8">
+              <div class="d-flex align-items-center mb-3">
+                <div class="rounded-circle p-3 me-3" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                  <i class="bi bi-receipt-cutoff" style="font-size: 1.8rem; color: white;"></i>
+                </div>
+                <div>
+                  <h5 class="mb-1 fw-bold" style="color: #3e2723;">Compra #${compra.id_venta}</h5>
+                  <p class="mb-0 text-muted">
+                    <i class="bi bi-calendar3"></i> ${fechaFormateada}
+                    ${currentUser.rol === 'admin' ? `<br><i class="bi bi-person"></i> ${compra.cliente}` : ''}
+                  </p>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <h6 class="fw-bold mb-2" style="color: #5d4037;">
+                  <i class="bi bi-bag-fill"></i> Productos:
+                </h6>
+                ${productosHTML}
+              </div>
+            </div>
+            
+            <div class="col-md-4 d-flex flex-column justify-content-center align-items-end">
+              <div class="text-center p-3 rounded mb-3" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border: 2px solid #f39c12; min-width: 180px;">
+                <p class="mb-1 fw-semibold" style="color: #5d4037;">TOTAL PAGADO</p>
+                <h3 class="mb-0 fw-bold" style="color: #f39c12;">$${parseFloat(compra.total).toFixed(2)}</h3>
+              </div>
+              
+              <button class="btn btn-sm btn-outline-primary" onclick="verTicketHistorial(${compra.id_venta}, ${JSON.stringify(compra).replace(/"/g, '&quot;')})">
+                <i class="bi bi-eye"></i> Ver Ticket
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Ver ticket desde el historial
+function verTicketHistorial(id_venta, compra) {
+  // Parsear la compra si viene como string
+  if (typeof compra === 'string') {
+    try {
+      compra = JSON.parse(compra);
+    } catch (e) {
+      console.error('Error al parsear compra:', e);
+      return;
+    }
+  }
+  
+  // Cerrar modal de historial
+  bootstrap.Modal.getInstance(document.getElementById('modalHistorial')).hide();
+  
+  // Mostrar ticket con los datos de la compra
+  setTimeout(() => {
+    mostrarTicketDesdeHistorial(compra);
+  }, 300);
+}
+
+// Mostrar ticket desde historial
+function mostrarTicketDesdeHistorial(compra) {
+  document.getElementById('ticketNumVenta').textContent = `#${compra.id_venta}`;
+  
+  const fecha = new Date(compra.fecha);
+  const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  document.getElementById('ticketFecha').textContent = fechaFormateada;
+  
+  document.getElementById('ticketCliente').textContent = compra.cliente || currentUser.nombre;
+  
+  const productosHTML = compra.productos.map((prod, index) => `
+    <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px dashed #e0e0e0;">
+      <div style="flex: 1;">
+        <span class="fw-semibold" style="color: #3e2723;">${index + 1}. ${prod.nombre}</span><br>
+        <small style="color: #5d4037;">${prod.cantidad} x $${parseFloat(prod.precio_unitario).toFixed(2)}</small>
+      </div>
+      <div class="text-end">
+        <span class="fw-bold" style="color: #d4af37;">$${parseFloat(prod.subtotal).toFixed(2)}</span>
+      </div>
+    </div>
+  `).join('');
+  
+  document.getElementById('ticketProductos').innerHTML = productosHTML;
+  document.getElementById('ticketTotal').textContent = `$${parseFloat(compra.total).toFixed(2)}`;
+  document.getElementById('ticketFondosRestantes').textContent = '-';
+  
+  const modal = new bootstrap.Modal(document.getElementById('modalTicket'));
+  modal.show();
+}
+
+// Event listener para el botón de filtrar (admin)
+document.addEventListener('DOMContentLoaded', () => {
+  const btnFiltrar = document.getElementById('btnFiltrarHistorial');
+  if (btnFiltrar) {
+    btnFiltrar.addEventListener('click', () => {
+      const fechaInicio = document.getElementById('filtroFechaInicio').value;
+      const fechaFin = document.getElementById('filtroFechaFin').value;
+      
+      const filtros = {};
+      if (fechaInicio) filtros.fecha_inicio = fechaInicio;
+      if (fechaFin) filtros.fecha_fin = fechaFin;
+      
+      cargarHistorialAdmin(filtros);
+    });
+  }
+});
