@@ -804,15 +804,6 @@ async function eliminarUsuario(id) {
   else cargarUsuarios();
 }
 
-// PLACEHOLDERS
-function abrirHistorialCompras() {
-  showToast('Historial de compras - Próximamente', 'info');
-}
-
-function abrirGraficos() {
-  showToast('Estadísticas - Próximamente', 'info');
-}
-
 // UTILIDADES
 function showToast(message, type = "success") {
   const container = document.getElementById("toast-container");
@@ -848,8 +839,6 @@ function escapeHtml(unsafe) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]; 
   });
 }
-
-// AGREGAR ESTAS FUNCIONES AL FINAL DE script.js
 
 // Función para mostrar el ticket
 async function mostrarTicket(venta) {
@@ -930,7 +919,6 @@ function mostrarTicketSimple(venta) {
 }
 
 // Función para descargar el ticket como imagen/PDF
-// FUNCIÓN MEJORADA PARA DESCARGAR TICKET COMPLETO
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     const btnDescargar = document.getElementById('btnDescargarTicket');
