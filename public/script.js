@@ -517,10 +517,10 @@ function borrarProducto(id) {
 // GALERÍA
 function cargarGaleria() {
   const panes = [
-    { nombre: 'Pan de Muerto', descripcion: 'Tradicional pan mexicano decorado con "huesitos" de masa y azúcar.', precio: 25, img: 'https://images.pexels.com/photos/19132888/pexels-photo-19132888.jpeg' },
-    { nombre: 'Calaverita de Azúcar', descripcion: 'Dulce típico de Día de Muertos hecho de azúcar y decorado a mano.', precio: 15, img: 'https://images.pexels.com/photos/5702776/pexels-photo-5702776.jpeg' },
-    { nombre: 'Pan de Calabaza', descripcion: 'Pan suave y esponjoso hecho con puré de calabaza y especias.', precio: 30, img: 'https://images.pexels.com/photos/6211080/pexels-photo-6211080.jpeg' },
-    { nombre: 'Pan Fantasma', descripcion: 'Pan decorado con forma de fantasma, ideal para Halloween.', precio: 18, img: 'https://images.pexels.com/photos/1304543/pexels-photo-1304543.jpeg' }
+    { nombre: 'Rosquillas', descripcion: 'Ricas rosquillas rellenas de mermelada y con foma redondeada.', precio: 25, img: 'https://images.pexels.com/photos/19132888/pexels-photo-19132888.jpeg' },
+    { nombre: 'Pavo', descripcion: 'Rico pavo asado para compartir en familia y pasar una navidad increíble.', precio: 150, img: 'https://images.pexels.com/photos/5702776/pexels-photo-5702776.jpeg' },
+    { nombre: 'Cupcakes', descripcion: 'panquesitos sabrosos con una cubierta de chantillí por encima.', precio: 15, img: 'https://images.pexels.com/photos/6211080/pexels-photo-6211080.jpeg' },
+    { nombre: 'Ponche', descripcion: 'Sabroso elixir hecho por los mismos dioses para disfrutar con cuanquier pan.', precio: 18, img: 'https://images.pexels.com/photos/1304543/pexels-photo-1304543.jpeg' }
   ];
   const galeria = document.getElementById('galeria');
   galeria.innerHTML = panes.map(pan => `
@@ -930,8 +930,8 @@ function mostrarTicketSimple(venta) {
 }
 
 // Función para descargar el ticket como imagen/PDF
+// FUNCIÓN MEJORADA PARA DESCARGAR TICKET COMPLETO
 document.addEventListener('DOMContentLoaded', () => {
-  // Esperar un momento para que html2canvas y jsPDF se carguen
   setTimeout(() => {
     const btnDescargar = document.getElementById('btnDescargarTicket');
     if (btnDescargar) {
@@ -954,31 +954,45 @@ document.addEventListener('DOMContentLoaded', () => {
           btnDescargar.disabled = true;
           btnDescargar.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
           
-          // Capturar el contenido como imagen
+          // Obtener dimensiones reales del contenido
+          const originalHeight = ticketContent.scrollHeight;
+          const originalWidth = ticketContent.offsetWidth;
+          
+          // Capturar el contenido como imagen con mejor calidad
           const canvas = await html2canvas(ticketContent, {
             backgroundColor: '#fff8e1',
-            scale: 2,
+            scale: 3, // Mayor escala para mejor calidad
             logging: false,
-            useCORS: true
+            useCORS: true,
+            allowTaint: true,
+            height: originalHeight, // Altura completa del contenido
+            windowHeight: originalHeight,
+            scrollY: -window.scrollY,
+            scrollX: -window.scrollX
           });
           
-          // Convertir a PDF
+          // Convertir a PDF con tamaño dinámico
           const imgData = canvas.toDataURL('image/png');
           const { jsPDF } = window.jspdf;
+          
+          // Calcular dimensiones del PDF
+          const pdfWidth = 80; // Ancho en mm (ticket más angosto)
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          
+          // Crear PDF con tamaño personalizado
           const pdf = new jsPDF({
-            orientation: 'portrait',
+            orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
             unit: 'mm',
-            format: 'a5'
+            format: [pdfWidth, pdfHeight] // Tamaño dinámico según contenido
           });
           
-          const imgWidth = 148;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          
-          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+          // Agregar imagen al PDF
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, '', 'FAST');
           
           // Descargar
           const numVenta = document.getElementById('ticketNumVenta').textContent;
-          pdf.save(`Ticket_${numVenta}_Panaderia_La_Desesperanza.pdf`);
+          const fecha = new Date().toISOString().split('T')[0];
+          pdf.save(`Ticket_${numVenta}_${fecha}_Panaderia_La_Desesperanza.pdf`);
           
           showToast('¡Ticket descargado exitosamente!', 'success');
           
@@ -994,8 +1008,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 1000);
 });
-
-// AGREGAR AL FINAL DE script.js
 
 // Función para abrir el historial de compras
 async function abrirHistorialCompras() {
