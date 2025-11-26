@@ -626,6 +626,151 @@
     </div>
   </div>
 
+  <!-- Modal Estadísticas con Gráficas -->
+<div class="modal fade" id="modalEstadisticas" tabindex="-1">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content" style="background: linear-gradient(135deg, #0a3d62 0%, #1e5f8c 100%);">
+      
+      <div class="modal-header border-0" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">
+        <h3 class="modal-title fw-bold text-white">
+          <i class="bi bi-graph-up-arrow"></i> 📊 ESTADÍSTICAS Y GRÁFICAS NAVIDEÑAS
+        </h3>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      
+      <div class="modal-body p-4" style="overflow-y: auto; max-height: calc(100vh - 150px);">
+        
+        <!-- Resumen en Cards -->
+        <div class="row g-4 mb-5">
+          <div class="col-md-3">
+            <div class="card h-100 text-center shadow-lg" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%); border: 3px solid #ffd700;">
+              <div class="card-body">
+                <i class="bi bi-cart-check-fill text-white" style="font-size: 3rem;"></i>
+                <h2 class="text-white fw-bold mt-3 mb-0" id="statTotalVentasCard">0</h2>
+                <p class="text-white mb-0 fw-semibold">Total Ventas</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card h-100 text-center shadow-lg" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border: 3px solid #27ae60;">
+              <div class="card-body">
+                <i class="bi bi-cash-coin text-white" style="font-size: 3rem;"></i>
+                <h2 class="text-white fw-bold mt-3 mb-0" id="statIngresosCard">$0</h2>
+                <p class="text-white mb-0 fw-semibold">Ingresos Totales</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card h-100 text-center shadow-lg" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border: 3px solid #ffd700;">
+              <div class="card-body">
+                <i class="bi bi-box-seam-fill text-white" style="font-size: 3rem;"></i>
+                <h2 class="text-white fw-bold mt-3 mb-0" id="statProductosCard">0</h2>
+                <p class="text-white mb-0 fw-semibold">Productos Vendidos</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card h-100 text-center shadow-lg" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border: 3px solid #27ae60;">
+              <div class="card-body">
+                <i class="bi bi-people-fill text-white" style="font-size: 3rem;"></i>
+                <h2 class="text-white fw-bold mt-3 mb-0" id="statClientesCard">0</h2>
+                <p class="text-white mb-0 fw-semibold">Clientes Activos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráficas -->
+        <div class="row g-4">
+          
+          <!-- Gráfica 1: Productos Más Vendidos -->
+          <div class="col-lg-6">
+            <div class="card shadow-lg" style="background: white; border: 3px solid #27ae60;">
+              <div class="card-header text-white fw-bold" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">
+                <i class="bi bi-bar-chart-fill"></i> PRODUCTOS MÁS VENDIDOS (TOP 10)
+              </div>
+              <div class="card-body p-4">
+                <canvas id="chartProductosMasVendidos" style="max-height: 350px;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráfica 2: Usuarios con Más Compras -->
+          <div class="col-lg-6">
+            <div class="card shadow-lg" style="background: white; border: 3px solid #f39c12;">
+              <div class="card-header text-white fw-bold" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+                <i class="bi bi-people-fill"></i> USUARIOS CON MÁS COMPRAS (TOP 10)
+              </div>
+              <div class="card-body p-4">
+                <canvas id="chartUsuariosMasCompras" style="max-height: 350px;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráfica 3: Ventas Última Semana -->
+          <div class="col-lg-6">
+            <div class="card shadow-lg" style="background: white; border: 3px solid #3498db;">
+              <div class="card-header text-white fw-bold" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                <i class="bi bi-calendar-week"></i> VENTAS DIARIAS (ÚLTIMA SEMANA)
+              </div>
+              <div class="card-body p-4">
+                <canvas id="chartVentasSemana" style="max-height: 350px;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráfica 4: Ingresos Mensuales -->
+          <div class="col-lg-6">
+            <div class="card shadow-lg" style="background: white; border: 3px solid #e74c3c;">
+              <div class="card-header text-white fw-bold" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <i class="bi bi-graph-up"></i> INGRESOS MENSUALES (6 MESES)
+              </div>
+              <div class="card-body p-4">
+                <canvas id="chartIngresosMensuales" style="max-height: 350px;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráfica 5: Top Usuarios por Ingresos (Dona) -->
+          <div class="col-lg-6">
+            <div class="card shadow-lg" style="background: white; border: 3px solid #9b59b6;">
+              <div class="card-header text-white fw-bold" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);">
+                <i class="bi bi-pie-chart-fill"></i> TOP 5 USUARIOS POR INGRESOS
+              </div>
+              <div class="card-body p-4">
+                <canvas id="chartTopUsuariosIngresos" style="max-height: 350px;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráfica 6: Stock vs Vendido -->
+          <div class="col-lg-6">
+            <div class="card shadow-lg" style="background: white; border: 3px solid #16a085;">
+              <div class="card-header text-white fw-bold" style="background: linear-gradient(135deg, #16a085 0%, #138d75 100%);">
+                <i class="bi bi-box-seam"></i> STOCK ACTUAL VS CANTIDAD VENDIDA
+              </div>
+              <div class="card-body p-4">
+                <canvas id="chartStockVsVendido" style="max-height: 350px;"></canvas>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+      <div class="modal-footer border-0" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);">
+        <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cerrar
+        </button>
+        <button type="button" class="btn btn-success btn-lg" onclick="cargarEstadisticas()">
+          <i class="bi bi-arrow-clockwise"></i> Actualizar Datos
+        </button>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
   <!-- Contenedor de notificaciones -->
   <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;"></div>
 
@@ -636,6 +781,8 @@
       <small style="font-weight: 300; letter-spacing: 1px;">&copy; 2025 Todos los derechos reservados</small>
     </div>
   </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Agregar CDN de html2canvas y jsPDF antes del cierre de </body> -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -653,5 +800,6 @@
   <!-- Tu script principal -->
   <script src="script.js"></script>
   <script src="mapa.js"></script>
+  <script src="estadisticas.js"></script>
 </body>
 </html>

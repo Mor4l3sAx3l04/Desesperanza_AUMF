@@ -53,9 +53,9 @@ app.use(
 (async () => {
   try {
     const res = await pool.query("SELECT NOW()");
-    console.log("✅ Conexión exitosa a PostgreSQL:", res.rows[0]);
+    console.log("Conexión exitosa a PostgreSQL:", res.rows[0]);
   } catch (err) {
-    console.error("❌ Error al conectar a PostgreSQL:", err);
+    console.error("Error al conectar a PostgreSQL:", err);
     process.exit(1);
   }
 })();
@@ -1033,6 +1033,129 @@ app.get("/historial/estadisticas", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error al obtener estadísticas:", err);
     res.status(500).json({ error: "Error al obtener estadísticas." });
+  }
+});
+
+// RUTAS PARA GRÁFICAS DE ESTADÍSTICAS
+
+// 1. Productos Más Vendidos (Top 10)
+app.get("/estadisticas/productos-mas-vendidos", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        p.nombre,
+        SUM(dv.cantidad) as cantidad_vendida
+      FROM detalle_venta dv
+      JOIN producto p ON dv.id_producto = p.id_producto
+      GROUP BY p.id_producto, p.nombre
+      ORDER BY cantidad_vendida DESC
+      LIMIT 10`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error en productos más vendidos:", err);
+    res.status(500).json({ error: "Error al obtener datos." });
+  }
+});
+
+// 2. Usuarios con Más Compras (Top 10)
+app.get("/estadisticas/usuarios-mas-compras", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        u.nombre,
+        COUNT(v.id_venta) as total_compras
+      FROM venta v
+      JOIN usuario u ON v.id_usuario = u.id_usuario
+      GROUP BY u.id_usuario, u.nombre
+      ORDER BY total_compras DESC
+      LIMIT 10`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error en usuarios con más compras:", err);
+    res.status(500).json({ error: "Error al obtener datos." });
+  }
+});
+
+// 3. Ventas Diarias (Última Semana)
+app.get("/estadisticas/ventas-ultima-semana", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        DATE(fecha) as fecha,
+        COUNT(*) as total_ventas,
+        SUM(total) as ingresos
+      FROM venta
+      WHERE fecha >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE(fecha)
+      ORDER BY fecha ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error en ventas última semana:", err);
+    res.status(500).json({ error: "Error al obtener datos." });
+  }
+});
+
+// 4. Ingresos Mensuales (Últimos 6 meses)
+app.get("/estadisticas/ingresos-mensuales", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        TO_CHAR(fecha, 'YYYY-MM') as mes,
+        TO_CHAR(fecha, 'Mon YYYY') as mes_nombre,
+        SUM(total) as ingresos
+      FROM venta
+      WHERE fecha >= NOW() - INTERVAL '6 months'
+      GROUP BY TO_CHAR(fecha, 'YYYY-MM'), TO_CHAR(fecha, 'Mon YYYY')
+      ORDER BY mes ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error en ingresos mensuales:", err);
+    res.status(500).json({ error: "Error al obtener datos." });
+  }
+});
+
+// 5. Top 5 Usuarios por Ingresos (Para gráfica de dona)
+app.get("/estadisticas/top-usuarios-ingresos", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        u.nombre,
+        SUM(v.total) as ingresos_totales
+      FROM venta v
+      JOIN usuario u ON v.id_usuario = u.id_usuario
+      GROUP BY u.id_usuario, u.nombre
+      ORDER BY ingresos_totales DESC
+      LIMIT 5`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error en top usuarios por ingresos:", err);
+    res.status(500).json({ error: "Error al obtener datos." });
+  }
+});
+
+// 6. Stock Actual vs Cantidad Vendida (Todos los productos)
+app.get("/estadisticas/stock-vs-vendido", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        p.nombre,
+        p.stock as stock_actual,
+        COALESCE(SUM(dv.cantidad), 0) as cantidad_vendida
+      FROM producto p
+      LEFT JOIN detalle_venta dv ON p.id_producto = dv.id_producto
+      GROUP BY p.id_producto, p.nombre, p.stock
+      ORDER BY cantidad_vendida DESC
+      LIMIT 10`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error en stock vs vendido:", err);
+    res.status(500).json({ error: "Error al obtener datos." });
   }
 });
   
