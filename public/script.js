@@ -264,8 +264,6 @@ async function agregarFondos() {
 
 // PERFIL DROPDOWN
 
-// PERFIL DROPDOWN - VERSIÓN ACTUALIZADA CON ESTADÍSTICAS
-
 function actualizarPerfilDropdown() {
   const menu = document.getElementById('perfilDropdown');
   menu.innerHTML = '';
