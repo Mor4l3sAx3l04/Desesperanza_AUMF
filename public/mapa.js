@@ -7,59 +7,49 @@ let myMarker; // Mi marcador
 
 // Esperar a que el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🗺️ Mapa.js cargado correctamente');
   
   // Inicializar el mapa cuando se abre el modal
   const btnConocenos = document.getElementById('btnConocenos');
   if (btnConocenos) {
     btnConocenos.addEventListener('click', () => {
-      console.log('🔵 Modal Conócenos abierto');
       // Esperar un momento para que el modal se renderice
       setTimeout(() => {
         initMap();
       }, 500);
     });
   } else {
-    console.error('❌ No se encontró el botón #btnConocenos');
+    console.error(' No se encontró el botón #btnConocenos');
   }
 });
 
 function initMap() {
-  console.log('🚀 Intentando inicializar mapa...');
   
   // Verificar si el contenedor existe
   const mapContainer = document.getElementById('map-template');
   if (!mapContainer) {
-    console.error('❌ No se encontró el div #map-template en el DOM');
+    console.error(' No se encontró el div #map-template en el DOM');
     return;
   }
   
   // Si el mapa ya existe, solo actualizar tamaño
   if (map) {
-    console.log('📐 Mapa ya existe, actualizando tamaño...');
     setTimeout(() => {
       map.invalidateSize();
     }, 100);
     return;
   }
 
-  console.log('🌍 Creando nuevo mapa...');
-
   // Coordenadas de la Ciudad de México (Pastelería Ideal como ejemplo)
   const mexicoCityCoords = [19.4270202, -99.1617437];
   
   // Crear el mapa centrado en CDMX con zoom
   map = L.map('map-template').setView(mexicoCityCoords, 13);
-  
-  console.log('✅ Mapa creado exitosamente');
 
   // Agregar capa de tiles (el diseño del mapa)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(map);
-
-  console.log('🗺️ Tiles agregados al mapa');
 
   // Icono personalizado para la panadería
   const panaderiaIcon = L.divIcon({
@@ -81,13 +71,11 @@ function initMap() {
   `);
   map.addLayer(panaderiaMarker);
 
-  console.log('🍞 Marcador de panadería agregado');
-
   // Conectar a Socket.IO
   socket = io();
   
   socket.on('connect', () => {
-    console.log('✅ Socket.IO conectado:', socket.id);
+    console.log('Socket.IO conectado:', socket.id);
   });
 
   // Intentar obtener la ubicación del usuario
@@ -111,15 +99,11 @@ function initMap() {
     myMarker.bindPopup('¡Aquí estoy yo! 👋');
     map.addLayer(myMarker);
 
-    console.log('🟢 Mi marcador agregado al mapa');
-
     // Enviar mis coordenadas al servidor
     socket.emit('userCoordinates', {
       lat: coords.lat,
       lng: coords.lng
     });
-
-    console.log('📤 Coordenadas enviadas al servidor');
 
     // Agregar un círculo de precisión
     L.circle(coords, {
@@ -132,12 +116,12 @@ function initMap() {
 
   // Si hay error al obtener ubicación
   map.on('locationerror', (e) => {
-    console.log('⚠️ No se pudo obtener la ubicación:', e.message);
+    console.log('No se pudo obtener la ubicación:', e.message);
   });
 
   // Escuchar cuando otros usuarios se conectan
   socket.on('userNewCoordinates', (data) => {
-    console.log('👤 Nuevo usuario conectado:', data);
+    console.log('Nuevo usuario conectado:', data);
     
     const { coords, socketId } = data;
     
@@ -151,18 +135,17 @@ function initMap() {
 
     // Crear marcador del otro usuario
     const marker = L.marker([coords.lat, coords.lng], { icon: otherIcon });
-    marker.bindPopup('👤 Otro cliente conectado');
+    marker.bindPopup('Otro cliente conectado');
     map.addLayer(marker);
 
     // Guardar referencia al marcador
     userMarkers[socketId] = marker;
     
-    console.log('🟡 Marcador de otro usuario agregado');
   });
 
   // Cuando un usuario se desconecta
   socket.on('userDisconnected', (socketId) => {
-    console.log('👋 Usuario desconectado:', socketId);
+    console.log(' Usuario desconectado:', socketId);
     
     // Eliminar su marcador del mapa
     if (userMarkers[socketId]) {
@@ -175,7 +158,6 @@ function initMap() {
   // Ajustar tamaño del mapa después de renderizar
   setTimeout(() => {
     map.invalidateSize();
-    console.log('📐 Tamaño del mapa ajustado');
   }, 200);
 }
 
@@ -183,10 +165,8 @@ function initMap() {
 const modalConocenos = document.getElementById('modalConocenos');
 if (modalConocenos) {
   modalConocenos.addEventListener('hidden.bs.modal', () => {
-    console.log('❌ Modal cerrado');
     if (socket) {
       socket.disconnect();
-      console.log('🔌 Socket desconectado');
     }
   });
 }

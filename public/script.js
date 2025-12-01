@@ -277,7 +277,7 @@ function actualizarPerfilDropdown() {
   const liFondos = document.createElement('li');
   liFondos.innerHTML = `
     <div class="dropdown-item-text">
-      <strong>💰 Fondos:</strong> 
+      <strong>Fondos:</strong> 
       <span id="fondosDisplay" class="text-success fw-bold">$${fondosUsuario.toFixed(2)}</span>
     </div>
   `;
@@ -315,7 +315,7 @@ function actualizarPerfilDropdown() {
     `;
     menu.appendChild(liGestionUsuarios);
     
-    // ⭐ NUEVO: Menú de Estadísticas
+    // Menú de Estadísticas
     const liEstadisticas = document.createElement('li');
     liEstadisticas.innerHTML = `
       <a class="dropdown-item" href="#" id="btnEstadisticas">

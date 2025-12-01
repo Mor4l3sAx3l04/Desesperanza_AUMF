@@ -46,8 +46,6 @@ function destruirGraficas() {
 
 // Cargar todas las estadísticas
 async function cargarEstadisticas() {
-  console.log('📊 Cargando estadísticas...');
-  
   try {
     // Destruir gráficas anteriores
     destruirGraficas();
@@ -68,11 +66,8 @@ async function cargarEstadisticas() {
       cargarStockVsVendido(),
       cargarResumenCards()
     ]);
-    
-    console.log('✅ Estadísticas cargadas correctamente');
     mostrarNotificacion('Estadísticas actualizadas', 'success');
   } catch (error) {
-    console.error('❌ Error cargando estadísticas:', error);
     mostrarNotificacion('Error al cargar estadísticas', 'danger');
   }
 }
@@ -107,7 +102,7 @@ async function cargarProductosMasVendidos() {
           },
           title: {
             display: true,
-            text: '🥖 Panes más populares',
+            text: 'Panes más populares',
             font: { size: 16, weight: 'bold' },
             color: '#27ae60'
           }
@@ -166,7 +161,7 @@ async function cargarUsuariosMasCompras() {
           },
           title: {
             display: true,
-            text: '👥 Clientes más frecuentes',
+            text: 'Clientes más frecuentes',
             font: { size: 16, weight: 'bold' },
             color: '#f39c12'
           }
@@ -238,7 +233,7 @@ async function cargarVentasSemana() {
           },
           title: {
             display: true,
-            text: '📅 Tendencia de ventas semanal',
+            text: 'Tendencia de ventas semanal',
             font: { size: 16, weight: 'bold' },
             color: '#3498db'
           }
@@ -297,7 +292,7 @@ async function cargarIngresosMensuales() {
           },
           title: {
             display: true,
-            text: '💰 Evolución de ingresos',
+            text: 'Evolución de ingresos',
             font: { size: 16, weight: 'bold' },
             color: '#e74c3c'
           }
@@ -363,7 +358,7 @@ async function cargarTopUsuariosIngresos() {
           },
           title: {
             display: true,
-            text: '⭐ Mejores clientes',
+            text: 'Mejores clientes',
             font: { size: 16, weight: 'bold' },
             color: '#9b59b6'
           },
@@ -424,7 +419,7 @@ async function cargarStockVsVendido() {
           },
           title: {
             display: true,
-            text: '📦 Inventario vs Rotación',
+            text: 'Inventario vs Rotación',
             font: { size: 16, weight: 'bold' },
             color: '#16a085'
           }
@@ -519,12 +514,10 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
 
 // Event listener para cuando se abre el modal
 document.getElementById('modalEstadisticas')?.addEventListener('shown.bs.modal', () => {
-  console.log('📊 Modal de estadísticas abierto');
   cargarEstadisticas();
 });
 
 // Event listener para cuando se cierra el modal
 document.getElementById('modalEstadisticas')?.addEventListener('hidden.bs.modal', () => {
-  console.log('🔒 Modal de estadísticas cerrado');
   destruirGraficas();
 });

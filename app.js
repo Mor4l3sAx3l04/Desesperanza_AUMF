@@ -1,7 +1,4 @@
 // app.js
-// Funcionalidades: login, registro, productos, categorías, carrito, ventas y usuarios (admin)
-// Base de datos: PostgreSQL (Render)
-//Socket.IO para mapa en tiempo real
 
 import 'dotenv/config';
 import express from "express";
@@ -71,11 +68,10 @@ function requireAdmin(req, res, next) {
 // SOCKET.IO - MAPA EN TIEMPO REAL
 
 io.on('connection', (socket) => {
-  console.log('👤 Usuario conectado al mapa:', socket.id);
+  console.log(' Usuario conectado al mapa:', socket.id);
   
   // Recibir coordenadas del usuario
   socket.on('userCoordinates', (coords) => {
-    console.log('📍 Coordenadas recibidas:', coords);
     // Enviar a todos los demás usuarios conectados
     socket.broadcast.emit('userNewCoordinates', {
       coords: coords,
@@ -85,7 +81,7 @@ io.on('connection', (socket) => {
   
   // Cuando un usuario se desconecta
   socket.on('disconnect', () => {
-    console.log('👋 Usuario desconectado:', socket.id);
+    console.log('Usuario desconectado:', socket.id);
     socket.broadcast.emit('userDisconnected', socket.id);
   });
 });
